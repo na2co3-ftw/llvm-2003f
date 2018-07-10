@@ -114,6 +114,17 @@ addPassesToGenerateCode(LLVMTargetMachine *TM, PassManagerBase &PM,
   return &MMI->getContext();
 }
 
+MCStreamer *LLVMTargetMachine::createMCStreamerToAsm(MCContext &Context,
+                                                     std::unique_ptr<formatted_raw_ostream>FOut,
+                                                     MCInstPrinter *InstPrinter,
+                                                     MCCodeEmitter *MCE,
+                                                     MCAsmBackend *MAB) {
+  return getTarget().createAsmStreamer(
+      Context, std::move(FOut), Options.MCOptions.AsmVerbose,
+      Options.MCOptions.MCUseDwarfDirectory, InstPrinter, MCE, MAB,
+      Options.MCOptions.ShowMCInst);
+}
+
 bool LLVMTargetMachine::addAsmPrinter(PassManagerBase &PM,
     raw_pwrite_stream &Out, CodeGenFileType FileType,
     MCContext &Context) {
@@ -141,10 +152,7 @@ bool LLVMTargetMachine::addAsmPrinter(PassManagerBase &PM,
         getTarget().createMCAsmBackend(MRI, getTargetTriple().str(), TargetCPU,
                                        Options.MCOptions);
     auto FOut = llvm::make_unique<formatted_raw_ostream>(Out);
-    MCStreamer *S = getTarget().createAsmStreamer(
-        Context, std::move(FOut), Options.MCOptions.AsmVerbose,
-        Options.MCOptions.MCUseDwarfDirectory, InstPrinter, MCE, MAB,
-        Options.MCOptions.ShowMCInst);
+    MCStreamer *S = createMCStreamerToAsm(Context, std::move(FOut), InstPrinter, MCE, MAB);
     AsmStreamer.reset(S);
     break;
   }

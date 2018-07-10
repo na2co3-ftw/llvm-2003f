@@ -28,6 +28,7 @@ StringRef Triple::getArchTypeName(ArchType Kind) {
   case avr:            return "avr";
   case bpfel:          return "bpfel";
   case bpfeb:          return "bpfeb";
+  case f2003f:         return "2003f";
   case hexagon:        return "hexagon";
   case mips:           return "mips";
   case mipsel:         return "mipsel";
@@ -143,6 +144,8 @@ StringRef Triple::getArchTypePrefix(ArchType Kind) {
 
   case riscv32:
   case riscv64:     return "riscv";
+
+  case f2003f:      return "2003f";
   }
 }
 
@@ -261,6 +264,7 @@ Triple::ArchType Triple::getArchTypeForLLVMName(StringRef Name) {
     .Case("armeb", armeb)
     .Case("avr", avr)
     .StartsWith("bpf", BPFArch)
+    .Case("2003f", f2003f)
     .Case("mips", mips)
     .Case("mipsel", mipsel)
     .Case("mips64", mips64)
@@ -384,6 +388,7 @@ static Triple::ArchType parseArch(StringRef ArchName) {
     .Case("thumb", Triple::thumb)
     .Case("thumbeb", Triple::thumbeb)
     .Case("avr", Triple::avr)
+    .Case("2003f", Triple::f2003f)
     .Case("msp430", Triple::msp430)
     .Cases("mips", "mipseb", "mipsallegrex", Triple::mips)
     .Cases("mipsel", "mipsallegrexel", Triple::mipsel)
@@ -660,6 +665,9 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
   case Triple::ppc64:
     if (T.isOSDarwin())
       return Triple::MachO;
+    return Triple::ELF;
+
+  case Triple::f2003f:
     return Triple::ELF;
   }
   llvm_unreachable("unknown architecture");
@@ -1168,6 +1176,7 @@ static unsigned getArchPointerBitWidth(llvm::Triple::ArchType Arch) {
 
   case llvm::Triple::arm:
   case llvm::Triple::armeb:
+  case llvm::Triple::f2003f:
   case llvm::Triple::hexagon:
   case llvm::Triple::le32:
   case llvm::Triple::mips:
@@ -1251,6 +1260,7 @@ Triple Triple::get32BitArchVariant() const {
   case Triple::spir:
   case Triple::arm:
   case Triple::armeb:
+  case Triple::f2003f:
   case Triple::hexagon:
   case Triple::kalimba:
   case Triple::le32:
@@ -1300,6 +1310,7 @@ Triple Triple::get64BitArchVariant() const {
   switch (getArch()) {
   case Triple::UnknownArch:
   case Triple::avr:
+  case Triple::f2003f:
   case Triple::hexagon:
   case Triple::kalimba:
   case Triple::lanai:
@@ -1420,6 +1431,7 @@ Triple Triple::getLittleEndianArchVariant() const {
 
   switch (getArch()) {
   case Triple::UnknownArch:
+  case Triple::f2003f:
   case Triple::lanai:
   case Triple::ppc:
   case Triple::sparcv9:

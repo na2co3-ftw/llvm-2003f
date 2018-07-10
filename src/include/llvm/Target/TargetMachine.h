@@ -17,8 +17,13 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/MC/MCAsmBackend.h"
+#include "llvm/MC/MCCodeEmitter.h"
+#include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCStreamer.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/FormattedStream.h"
 #include "llvm/Target/TargetOptions.h"
 #include <string>
 
@@ -296,6 +301,13 @@ public:
   bool addPassesToEmitMC(PassManagerBase &PM, MCContext *&Ctx,
                          raw_pwrite_stream &OS,
                          bool DisableVerify = true) override;
+
+  /// Overridden to customise MCStreamer to writing Asm
+  virtual MCStreamer *createMCStreamerToAsm(MCContext &Context,
+                                            std::unique_ptr<formatted_raw_ostream>FOut,
+                                            MCInstPrinter *InstPrinter,
+                                            MCCodeEmitter *MCE,
+                                            MCAsmBackend *MAB);
 
   /// Returns true if the target is expected to pass all machine verifier
   /// checks. This is a stopgap measure to fix targets one by one. We will
