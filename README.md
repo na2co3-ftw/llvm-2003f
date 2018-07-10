@@ -24,6 +24,6 @@ Example:
 
 ## Directory Structure
 
-./src/lib/Target/F2003f/ is the 2003f backend implementation body.
+[src/lib/Target/F2003f](src/lib/Target/F2003f/) is the 2003f backend implementation body.
 
 Some other files are also modified to support it.
