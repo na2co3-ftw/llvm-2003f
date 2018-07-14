@@ -181,62 +181,64 @@ void F2003fMCAsmStreamer::FinishImpl() {
 }
 
 
-void F2003fMCAsmStreamer::EmitThumbFunc(MCSymbol *Func) {
+void F2003fMCAsmStreamer::EmitThumbFunc(MCSymbol *Func) { // .thumb_func
   llvm_unreachable("2003lk doesn't support this directive");
 }
 
-void F2003fMCAsmStreamer::EmitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
+void F2003fMCAsmStreamer::EmitAssignment(MCSymbol *Symbol, const MCExpr *Value) { // sybmol = value
   llvm_unreachable("2003lk doesn't support this directive");
 }
 
-void F2003fMCAsmStreamer::EmitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) {
+void F2003fMCAsmStreamer::EmitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) { // .weakref
   llvm_unreachable("2003lk doesn't support this directive");
 }
 
+// .type .globl .hidden .indirect_symbol .internal .lazy_reference .local .no_dead_strip .symbol_resolver
+// .alt_entry .private_extern .protected .reference .weak .weak_definition .weak_def_can_be_hidden
 bool F2003fMCAsmStreamer::EmitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) {
   return false;
 }
 
-void F2003fMCAsmStreamer::EmitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {
+void F2003fMCAsmStreamer::EmitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) { // .desc
   llvm_unreachable("2003lk doesn't support this directive");
 }
 
-void F2003fMCAsmStreamer::EmitCommonSymbol(MCSymbol *Symbol, uint64_t Size, unsigned ByteAlignment) {
+void F2003fMCAsmStreamer::EmitCommonSymbol(MCSymbol *Symbol, uint64_t Size, unsigned ByteAlignment) { // .comm
   llvm_unreachable("2003lk doesn't support this directive");
 }
 
-void F2003fMCAsmStreamer::EmitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size, unsigned ByteAlignment) {
+void F2003fMCAsmStreamer::EmitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size, unsigned ByteAlignment) { // .lcomm
   llvm_unreachable("2003lk doesn't support this directive");
 }
 
 void F2003fMCAsmStreamer::EmitZerofill(MCSection *Section, MCSymbol *Symbol,
-                                       uint64_t Size, unsigned ByteAlignment) {
+                                       uint64_t Size, unsigned ByteAlignment) { // .zerofill
   llvm_unreachable("2003lk doesn't support this directive");
 }
 
 void F2003fMCAsmStreamer::EmitTBSSSymbol(MCSection *Section, MCSymbol *Symbol, uint64_t Size,
-                                         unsigned ByteAlignment) {
+                                         unsigned ByteAlignment) { // .tbss
   llvm_unreachable("2003lk doesn't support this directive");
 }
 
-void F2003fMCAsmStreamer::EmitBytes(StringRef Data) {
+void F2003fMCAsmStreamer::EmitBytes(StringRef Data) { // .byte
   llvm_unreachable("2003lk doesn't support this directive");
 }
 
-void F2003fMCAsmStreamer::EmitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) {
+void F2003fMCAsmStreamer::EmitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) { // .byte .short .long .quad
   llvm_unreachable("2003lk doesn't support this directive");
 }
 
-void F2003fMCAsmStreamer::emitFill(const MCExpr &NumBytes, uint64_t FillValue, SMLoc Loc) {
+void F2003fMCAsmStreamer::emitFill(const MCExpr &NumBytes, uint64_t FillValue, SMLoc Loc) { // .zero
   llvm_unreachable("2003lk doesn't support this directive");
 }
 
-void F2003fMCAsmStreamer::emitFill(const MCExpr &NumValues, int64_t Size, int64_t Expr, SMLoc Loc) {
+void F2003fMCAsmStreamer::emitFill(const MCExpr &NumValues, int64_t Size, int64_t Expr, SMLoc Loc) { // .fill
   llvm_unreachable("2003lk doesn't support this directive");
 }
 
 void F2003fMCAsmStreamer::EmitValueToAlignment(unsigned ByteAlignment, int64_t Value,
-                                               unsigned ValueSize, unsigned MaxBytesToEmit) {
+                                               unsigned ValueSize, unsigned MaxBytesToEmit) { // .p2align .p2alignw .p2alignl
   llvm_unreachable("2003lk doesn't support this directive");
 }
 
@@ -244,19 +246,19 @@ void F2003fMCAsmStreamer::EmitCodeAlignment(unsigned ByteAlignment, unsigned Max
   llvm_unreachable("2003lk doesn't support this directive");
 }
 
-void F2003fMCAsmStreamer::emitValueToOffset(const MCExpr *Offset, unsigned char Value, SMLoc Loc) {
+void F2003fMCAsmStreamer::emitValueToOffset(const MCExpr *Offset, unsigned char Value, SMLoc Loc) { // .org
   llvm_unreachable("2003lk doesn't support this directive");
 }
 
-void F2003fMCAsmStreamer::EmitBundleAlignMode(unsigned AlignPow2) {
+void F2003fMCAsmStreamer::EmitBundleAlignMode(unsigned AlignPow2) { // .bundle_align_mode
   llvm_unreachable("2003lk doesn't support this directive");
 }
 
-void F2003fMCAsmStreamer::EmitBundleLock(bool AlignToEnd) {
+void F2003fMCAsmStreamer::EmitBundleLock(bool AlignToEnd) { // .bundle_lock
   llvm_unreachable("2003lk doesn't support this directive");
 }
 
-void F2003fMCAsmStreamer::EmitBundleUnlock() {
+void F2003fMCAsmStreamer::EmitBundleUnlock() { // .bundle_unlock
   llvm_unreachable("2003lk doesn't support this directive");
 }
 
