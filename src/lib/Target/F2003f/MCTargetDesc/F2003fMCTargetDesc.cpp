@@ -30,22 +30,22 @@ using namespace llvm;
 #define GET_REGINFO_MC_DESC
 #include "F2003fGenRegisterInfo.inc"
 
-// static MCInstrInfo *createF2003fMCInstrInfo() {
-//   MCInstrInfo *X = new MCInstrInfo();
-//   InitF2003fMCInstrInfo(X);
-//   return X;
-// }
+static MCInstrInfo *createF2003fMCInstrInfo() {
+  MCInstrInfo *X = new MCInstrInfo();
+  InitF2003fMCInstrInfo(X);
+  return X;
+}
 
-// static MCRegisterInfo *createF2003fMCRegisterInfo(const Triple &TT) {
-//   MCRegisterInfo *X = new MCRegisterInfo();
-//   InitF2003fMCRegisterInfo(X, F2003f::XX);
-//   return X;
-// }
+static MCRegisterInfo *createF2003fMCRegisterInfo(const Triple &TT) {
+  MCRegisterInfo *X = new MCRegisterInfo();
+  InitF2003fMCRegisterInfo(X, F2003f::XX);
+  return X;
+}
 
-// static MCSubtargetInfo *
-// createF2003fMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
-//   return createF2003fMCSubtargetInfoImpl(TT, CPU, FS);
-// }
+static MCSubtargetInfo *
+createF2003fMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
+  return createF2003fMCSubtargetInfoImpl(TT, CPU, FS);
+}
 
 static MCInstPrinter *createF2003fMCInstPrinter(const Triple &T,
                                                 unsigned SyntaxVariant,
@@ -61,17 +61,17 @@ extern "C" void LLVMInitializeF2003fTargetMC() {
   // Register the MC asm info.
   RegisterMCAsmInfo<F2003fMCAsmInfo> X(getTheF2003fTarget());
 
-  // // Register the MC instruction info.
-  // TargetRegistry::RegisterMCInstrInfo(getTheF2003fTarget(),
-  //                                     createF2003fMCInstrInfo);
+  // Register the MC instruction info.
+  TargetRegistry::RegisterMCInstrInfo(getTheF2003fTarget(),
+                                      createF2003fMCInstrInfo);
 
-  // // Register the MC register info.
-  // TargetRegistry::RegisterMCRegInfo(getTheF2003fTarget(),
-  //                                   createF2003fMCRegisterInfo);
+  // Register the MC register info.
+  TargetRegistry::RegisterMCRegInfo(getTheF2003fTarget(),
+                                    createF2003fMCRegisterInfo);
 
-  // // Register the MC subtarget info.
-  // TargetRegistry::RegisterMCSubtargetInfo(getTheF2003fTarget(),
-  //                                         createF2003fMCSubtargetInfo);
+  // Register the MC subtarget info.
+  TargetRegistry::RegisterMCSubtargetInfo(getTheF2003fTarget(),
+                                          createF2003fMCSubtargetInfo);
 
   // Register the MCInstPrinter.
   TargetRegistry::RegisterMCInstPrinter(getTheF2003fTarget(),
