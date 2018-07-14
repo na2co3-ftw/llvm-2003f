@@ -22,6 +22,7 @@ namespace llvm {
 class F2003fMCAsmStreamer final : public MCStreamer {
   std::unique_ptr<formatted_raw_ostream> OSOwner;
   formatted_raw_ostream &OS;
+  const MCAsmInfo *MAI;
   std::unique_ptr<MCInstPrinter> InstPrinter;
 
   SmallString<256> LabelToEmit;

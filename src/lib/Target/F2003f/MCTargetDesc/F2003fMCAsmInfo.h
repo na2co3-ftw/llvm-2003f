@@ -14,16 +14,18 @@
 #ifndef LLVM_LIB_TARGET_F2003F_MCTARGETDESC_F2003FMCASMINFO_H
 #define LLVM_LIB_TARGET_F2003F_MCTARGETDESC_F2003FMCASMINFO_H
 
-#include "llvm/MC/MCAsmInfoELF.h"
+#include "llvm/MC/MCAsmInfo.h"
 
 namespace llvm {
 class Triple;
 
-class F2003fMCAsmInfo : public MCAsmInfoELF {
-  void anchor() override;
+class F2003fMCAsmInfo : public MCAsmInfo {
+  virtual void anchor();
 
 public:
   explicit F2003fMCAsmInfo(const Triple &TT);
+
+  bool isValidUnquotedName(StringRef Name) const override;
 };
 
 } // namespace llvm

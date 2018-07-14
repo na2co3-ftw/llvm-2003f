@@ -16,7 +16,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/MC/MCAsmBackend.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -32,7 +32,7 @@ using namespace llvm;
 
 F2003fMCAsmStreamer::F2003fMCAsmStreamer(MCContext &Ctx, std::unique_ptr<formatted_raw_ostream> os,
                                          bool isVerboseAsm, MCInstPrinter *printer, bool showInst)
-    : MCStreamer(Ctx), OSOwner(std::move(os)), OS(*OSOwner),
+    : MCStreamer(Ctx), OSOwner(std::move(os)), OS(*OSOwner), MAI(Ctx.getAsmInfo()),
       InstPrinter(printer), CommentStream(CommentToEmit), IsVerboseAsm(isVerboseAsm), ShowInst(showInst) {
   assert(InstPrinter);
 }
@@ -60,9 +60,9 @@ void F2003fMCAsmStreamer::EmitCommentsAndEOL() {
          "Comment array not newline terminated");
   do {
     // Emit a line of comments.
-    OS.PadToColumn(40);
+    OS.PadToColumn(MAI->getCommentColumn());
     size_t Position = Comments.find('\n');
-    OS << "; " << Comments.substr(0, Position) <<'\n';
+    OS << MAI->getCommentString() << ' ' << Comments.substr(0, Position) <<'\n';
 
     Comments = Comments.substr(Position+1);
   } while (!Comments.empty());
@@ -86,13 +86,13 @@ raw_ostream &F2003fMCAsmStreamer::GetCommentOS() {
 }
 
 void F2003fMCAsmStreamer::emitRawComment(const Twine &T, bool TabPrefix) {
-  OS << ';' << T;
+  OS << MAI->getCommentString() << T;
   EmitEOL();
 }
 
 void F2003fMCAsmStreamer::addExplicitComment(const Twine &T) {
   StringRef c = T.getSingleStringRef();
-  if (c.startswith(StringRef(";"))) {
+  if (c.startswith(StringRef(MAI->getCommentString()))) {
     ExplicitCommentToEmit.append(c.str());
   } else {
     assert(false && "Unexpected Assembly Comment");
@@ -114,20 +114,17 @@ void F2003fMCAsmStreamer::AddBlankLine() {
 
 void F2003fMCAsmStreamer::ChangeSection(MCSection *Section, const MCExpr *) {}
 
-static bool isValidUnquotedName(StringRef Name) {
-  return true;
-}
-
 void F2003fMCAsmStreamer::EmitLabel(MCSymbol *Symbol, SMLoc Loc) {
   MCStreamer::EmitLabel(Symbol, Loc);
 
-  StringRef Name = Symbol->getName();
-  if (!isValidUnquotedName(Name)) {
-    report_fatal_error("Symbol name with unsupported characters");
+  std::string Name;
+  {
+    raw_string_ostream TempStream(Name);
+    Symbol->print(TempStream, MAI);
   }
 
   LabelToEmit.append(" l' ");
-  LabelToEmit.append(Name.str());
+  LabelToEmit.append(Name);
 }
 
 void F2003fMCAsmStreamer::EmitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI, bool PrintSchedInfo) {
