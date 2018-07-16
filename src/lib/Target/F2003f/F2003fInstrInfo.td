@@ -102,6 +102,15 @@ multiclass BinOp<string mnemonic, SDPatternOperator opnode, bit CommutableRR> {
                    [(store (opnode (i32 (load addr:$dst)), imm:$src), addr:$dst)]>;
 }
 
+multiclass MonoOp<string mnemonic, SDPatternOperator opnode> {
+  let Constraints = "$src = $dst" in
+  def r : F2003fInst<(outs Reg:$dst), (ins Reg:$src), !strconcat(mnemonic, " $dst"),
+                     [(set Reg:$dst, (opnode Reg:$src))]>;
+
+  def m : F2003fInst<(outs), (ins mem:$dst), !strconcat(mnemonic, " $dst"),
+                     [(store (opnode (i32 (load addr:$dst))), addr:$dst)]>;
+}
+
 // Instructions.
 // let hasSideEffects = 0 in
 def KRZrr : F2003fInst<(outs Reg:$dst), (ins Reg:$src), "krz $dst $src", []>;
@@ -123,18 +132,19 @@ def KRZmi : F2003fInst<(outs), (ins mem:$dst, i32imm:$src), "krz $dst $src",
 //def FEN : Instruction;
 //def INJ : Instruction;
 
-defm ATA : BinOp<"ata", add, 1>;
-defm NTA : BinOp<"nta", sub, 0>;
-//def LAT : Instruction;
-//def LATSNA : Instruction;
+defm NAC : MonoOp<"nac", not>;
 
+defm ATA    : BinOp<"ata", add, 1>;
+defm NTA    : BinOp<"nta", sub, 0>;
 defm ADA    : BinOp<"ada", and, 1>;
 defm EKC    : BinOp<"ekc", or, 1>;
-//def NAC : Instruction;
 defm DAL    : BinOp<"dal", xnor, 1>;
 defm DTO    : BinOp<"dto", srl, 0>;
 defm DRO    : BinOp<"dro", shl, 0>;
 defm DTOSNA : BinOp<"dtosna", sra, 0>;
+
+//def LAT : Instruction;
+//def LATSNA : Instruction;
 
 //def FI : Instruction;
 
