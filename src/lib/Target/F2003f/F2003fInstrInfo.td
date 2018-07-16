@@ -129,8 +129,10 @@ def KRZmi : F2003fInst<(outs), (ins mem:$dst, i32imm:$src), "krz $dst $src",
                        [(store (i32 imm:$src), addr:$dst)]>;
 
 //def MALKRZ : Instruction;
-//def FEN : Instruction;
 //def INJ : Instruction;
+
+let hasSideEffects = 0 in
+def FEN : F2003fInst<(outs), (ins), "fen", []>;
 
 defm NAC : MonoOp<"nac", not>;
 
