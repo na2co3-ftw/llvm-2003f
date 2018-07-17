@@ -177,3 +177,11 @@ def ADJCALLSTACKDOWN : F2003fPseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
 def ADJCALLSTACKUP : F2003fPseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
                                    [(F2003fcallseq_end timm:$amt1, timm:$amt2)]>;
 }
+
+//===----------------------------------------------------------------------===//
+// DAG Pattern Matching Rules
+//===----------------------------------------------------------------------===//
+
+def : Pat<(xor Reg:$src1, Reg:$src2), (NACr (DALrr Reg:$src1, Reg:$src2))>;
+def : Pat<(xor Reg:$src1, (load addr:$src2)), (NACr (DALrm Reg:$src1, addr:$src2))>;
+def : Pat<(xor Reg:$src1, imm:$src2), (NACr (DALri Reg:$src1, imm:$src2))>;
