@@ -72,34 +72,28 @@ class F2003fPseudo<dag outs, dag ins, list<dag> pattern>
   let isPseudo = 1;
 }
 
-class BinOpR<dag ins, string mnemonic, list<dag> pattern>
-  : F2003fInst<(outs Reg:$dst), ins, !strconcat(mnemonic, " $src1 $src2"), pattern> {
-  let Constraints = "$src1 = $dst";
-}
-
-class BinOpM<dag ins, string mnemonic, list<dag> pattern>
-  : F2003fInst<(outs), ins, !strconcat(mnemonic, " $dst $src"), pattern>;
-
 multiclass BinOp<string mnemonic, SDPatternOperator opnode, bit CommutableRR> {
-  let isCommutable = CommutableRR in
-  def rr : BinOpR<(ins Reg:$src1, Reg:$src2), mnemonic,
-                   [(set Reg:$dst, (opnode Reg:$src1, Reg:$src2))]>;
+  let Constraints = "$src1 = $dst" in {
+    let isCommutable = CommutableRR in
+    def rr : F2003fInst<(outs Reg:$dst), (ins Reg:$src1, Reg:$src2), !strconcat(mnemonic, " $src1 $src2"),
+                        [(set Reg:$dst, (opnode Reg:$src1, Reg:$src2))]>;
 
-  def rm : BinOpR<(ins Reg:$src1, mem:$src2), mnemonic,
-                   [(set Reg:$dst, (opnode Reg:$src1, (load addr:$src2)))]>;
+    def rm : F2003fInst<(outs Reg:$dst), (ins Reg:$src1, mem:$src2), !strconcat(mnemonic, " $src1 $src2"),
+                        [(set Reg:$dst, (opnode Reg:$src1, (load addr:$src2)))]>;
 
-  def ri : BinOpR<(ins Reg:$src1, i32imm:$src2), mnemonic,
-                   [(set Reg:$dst, (opnode Reg:$src1, imm:$src2))]>;
+    def ri : F2003fInst<(outs Reg:$dst), (ins Reg:$src1, i32imm:$src2), !strconcat(mnemonic, " $src1 $src2"),
+                        [(set Reg:$dst, (opnode Reg:$src1, imm:$src2))]>;
+  }
 
 
-  def mr : BinOpM<(ins mem:$dst, Reg:$src), mnemonic,
-                   [(store (opnode (load addr:$dst), Reg:$src), addr:$dst)]>;
+  def mr : F2003fInst<(outs), (ins mem:$dst, Reg:$src), !strconcat(mnemonic, " $dst $src"),
+                      [(store (opnode (load addr:$dst), Reg:$src), addr:$dst)]>;
 
-  def mm : BinOpM<(ins mem:$dst, mem:$src), mnemonic,
-                   [(store (opnode (i32 (load addr:$dst)), (load addr:$src)), addr:$dst)]>;
+  def mm : F2003fInst<(outs), (ins mem:$dst, mem:$src), !strconcat(mnemonic, " $dst $src"),
+                      [(store (opnode (i32 (load addr:$dst)), (load addr:$src)), addr:$dst)]>;
 
-  def mi : BinOpM<(ins mem:$dst, i32imm:$src), mnemonic,
-                   [(store (opnode (i32 (load addr:$dst)), imm:$src), addr:$dst)]>;
+  def mi : F2003fInst<(outs), (ins mem:$dst, i32imm:$src), !strconcat(mnemonic, " $dst $src"),
+                      [(store (opnode (i32 (load addr:$dst)), imm:$src), addr:$dst)]>;
 }
 
 multiclass MonoOp<string mnemonic, SDPatternOperator opnode> {
@@ -112,14 +106,16 @@ multiclass MonoOp<string mnemonic, SDPatternOperator opnode> {
 }
 
 // Instructions.
-// let hasSideEffects = 0 in
+let hasSideEffects = 0 in
 def KRZrr : F2003fInst<(outs Reg:$dst), (ins Reg:$src), "krz $dst $src", []>;
-// let canFoldAsLoad = 1, isReMaterializable = 1 in
+
+let canFoldAsLoad = 1, isReMaterializable = 1 in
 def KRZrm : F2003fInst<(outs Reg:$dst), (ins mem:$src), "krz $dst $src",
                        [(set Reg:$dst, (load addr:$src))]>;
-// let isReMaterializable = 1, isAsCheapAsAMove = 1 in
+
+let isReMaterializable = 1, isAsCheapAsAMove = 1 in
 def KRZri : F2003fInst<(outs Reg:$dst), (ins i32imm:$src), "krz $dst $src",
-                       [(set Reg:$dst, imm:$src)]>; // relocImm?
+                       [(set Reg:$dst, imm:$src)]>;
 
 def KRZmr : F2003fInst<(outs), (ins mem:$dst, Reg:$src), "krz $dst $src",
                        [(store Reg:$src, addr:$dst)]>;
@@ -145,8 +141,63 @@ defm DTO    : BinOp<"dto", srl, 0>;
 defm DRO    : BinOp<"dro", shl, 0>;
 defm DTOSNA : BinOp<"dtosna", sra, 0>;
 
-//def LAT : Instruction;
-//def LATSNA : Instruction;
+multiclass MulOp<string mnemonic, SDPatternOperator OpNode, SDPatternOperator OpNodeLoHi> {
+  let Constraints = "$src1 = $dst" in {
+    let isCommutable = 1 in
+    def _LOrr : F2003fInst<(outs Reg:$dst), (ins Reg:$src1, Reg:$src2), !strconcat(mnemonic, " $src1 $src1 $src2"),
+                           [(set Reg:$dst, (OpNode Reg:$src1, Reg:$src2))]>;
+
+    def _LOrm : F2003fInst<(outs Reg:$dst), (ins Reg:$src1, mem:$src2), !strconcat(mnemonic, " $src1 $src1 $src2"),
+                           [(set Reg:$dst, (OpNode Reg:$src1, (load addr:$src2)))]>;
+
+    def _LOri : F2003fInst<(outs Reg:$dst), (ins Reg:$src1, i32imm:$src2), !strconcat(mnemonic, " $src1 $src1 $src2"),
+                           [(set Reg:$dst, (OpNode Reg:$src1, imm:$src2))]>;
+  }
+
+  def _LOmr : F2003fInst<(outs), (ins mem:$dst, Reg:$src), !strconcat(mnemonic, " $dst $dst $src"),
+                      [(store (OpNode (load addr:$dst), Reg:$src), addr:$dst)]>;
+
+  def _LOmm : F2003fInst<(outs), (ins mem:$dst, mem:$src), !strconcat(mnemonic, " $dst $dst $src"),
+                      [(store (OpNode (i32 (load addr:$dst)), (load addr:$src)), addr:$dst)]>;
+
+  def _LOmi : F2003fInst<(outs), (ins mem:$dst, i32imm:$src), !strconcat(mnemonic, " $dst $dst $src"),
+                      [(store (OpNode (i32 (load addr:$dst)), imm:$src), addr:$dst)]>;
+
+
+  let Constraints = "$src1 = $dstl" in {
+    let isCommutable = 1 in
+    def rrr : F2003fInst<(outs Reg:$dstl, Reg:$dsth), (ins Reg:$src1, Reg:$src2), !strconcat(mnemonic, " $dstl $dsth $src2"),
+                         [(set Reg:$dstl, Reg:$dsth, (OpNodeLoHi Reg:$src1, Reg:$src2))]>;
+
+    def rrm : F2003fInst<(outs Reg:$dstl, Reg:$dsth), (ins Reg:$src1, mem:$src2), !strconcat(mnemonic, " $dstl $dsth $src2"),
+                         [(set Reg:$dstl, Reg:$dsth, (OpNodeLoHi Reg:$src1, (load addr:$src2)))]>;
+
+    def rri : F2003fInst<(outs Reg:$dstl, Reg:$dsth), (ins Reg:$src1, i32imm:$src2), !strconcat(mnemonic, " $dstl $dsth $src2"),
+                         [(set Reg:$dstl, Reg:$dsth, (OpNodeLoHi Reg:$src1, imm:$src2))]>;
+
+    let mayStore = 1, hasSideEffects = 0 in {
+      def rmr : F2003fInst<(outs Reg:$dstl), (ins Reg:$src1, mem:$dsth, Reg:$src2), !strconcat(mnemonic, " $dstl $dsth $src2"), []>;
+
+      let mayLoad = 1 in
+      def rmm : F2003fInst<(outs Reg:$dstl), (ins Reg:$src1, mem:$dsth, mem:$src2), !strconcat(mnemonic, " $dstl $dsth $src2"), []>;
+
+      def rmi : F2003fInst<(outs Reg:$dstl), (ins Reg:$src1, mem:$dsth, i32imm:$src2), !strconcat(mnemonic, " $dstl $dsth $src2"), []>;
+    }
+  }
+
+  let mayLoad = 1, mayStore = 1, hasSideEffects = 0 in {
+    def mrr : F2003fInst<(outs Reg:$dsth), (ins mem:$dstl, Reg:$src2), !strconcat(mnemonic, " $dstl $dsth $src2"), []>;
+    def mrm : F2003fInst<(outs Reg:$dsth), (ins mem:$dstl, mem:$src2), !strconcat(mnemonic, " $dstl $dsth $src2"), []>;
+    def mri : F2003fInst<(outs Reg:$dsth), (ins mem:$dstl, i32imm:$src2), !strconcat(mnemonic, " $dstl $dsth $src2"), []>;
+
+    def mmr : F2003fInst<(outs), (ins mem:$dstl, mem:$dsth, Reg:$src2), !strconcat(mnemonic, " $dstl $dsth $src2"), []>;
+    def mmm : F2003fInst<(outs), (ins mem:$dstl, mem:$dsth, mem:$src2), !strconcat(mnemonic, " $dstl $dsth $src2"), []>;
+    def mmi : F2003fInst<(outs), (ins mem:$dstl, mem:$dsth, i32imm:$src2), !strconcat(mnemonic, " $dstl $dsth $src2"), []>;
+  }
+}
+
+defm LAT    : MulOp<"lat"   , mul, umullohi>;
+defm LATSNA : MulOp<"latsna", mul, smullohi>;
 
 //def FI : Instruction;
 

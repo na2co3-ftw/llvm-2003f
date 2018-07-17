@@ -65,6 +65,9 @@ F2003fTargetLowering::F2003fTargetLowering(const TargetMachine &TM,
     setLoadExtAction(ISD::ZEXTLOAD, VT, MVT::i16, Promote);
   }
 
+  setOperationAction(ISD::MULHS, MVT::i32, Expand);
+  setOperationAction(ISD::MULHU, MVT::i32, Expand);
+
   // setMinFunctionAlignment(0);
   // setPrefFunctionAlignment(0);
 }
