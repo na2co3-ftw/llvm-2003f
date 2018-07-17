@@ -52,6 +52,8 @@ public:
                             const TargetRegisterClass *RC,
                             const TargetRegisterInfo *TRI) const override;
 
+  void getNoop(MCInst &NopInst) const override;
+
   // Branch folding goodness
   // bool
   // reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;

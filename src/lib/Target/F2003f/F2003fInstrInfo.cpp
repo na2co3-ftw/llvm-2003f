@@ -82,6 +82,10 @@ void F2003fInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
     .addFrameIndex(FrameIdx).addReg(0).addImm(0).addMemOperand(MMO);
 }
 
+void F2003fInstrInfo::getNoop(MCInst &NopInst) const {
+  NopInst.setOpcode(F2003f::FEN);
+}
+
 bool F2003fInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
                                     MachineBasicBlock *&TBB,
                                     MachineBasicBlock *&FBB,
