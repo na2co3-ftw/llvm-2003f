@@ -66,7 +66,39 @@ void F2003fFrameLowering::emitEpilogue(MachineFunction &MF,
   uint64_t StackSize = MFI.getStackSize();
 
   if (StackSize) {
-    BuildMI(MBB, MBBI, DL, TII.get(F2003f::ADAri), F2003f::F5)
+    BuildMI(MBB, MBBI, DL, TII.get(F2003f::ATAri), F2003f::F5)
     .addImm(StackSize);
   }
+}
+
+MachineBasicBlock::iterator F2003fFrameLowering::eliminateCallFramePseudoInstr(
+    MachineFunction &MF, MachineBasicBlock &MBB,
+    MachineBasicBlock::iterator I) const {
+  const F2003fInstrInfo &TII =
+      *static_cast<const F2003fInstrInfo *>(MF.getSubtarget().getInstrInfo());
+
+  // ADJCALLSTACKDOWN -> nta f5 amount
+  // ADJCALLSTACKUP   -> ata f5 amount
+  MachineInstr &Old = *I;
+  DebugLoc DL = Old.getDebugLoc();
+  unsigned Amount = TII.getFrameSize(Old);
+  if (Amount != 0) {
+    unsigned Opc = Old.getOpcode();
+    if (Opc == F2003f::ADJCALLSTACKDOWN) {
+      BuildMI(MBB, I, DL, TII.get(F2003f::NTAri), F2003f::F5)
+      .addReg(F2003f::F5)
+      .addImm(Amount);
+    } else {
+      assert(Opc == F2003f::ADJCALLSTACKUP);
+      BuildMI(MBB, I, DL, TII.get(F2003f::ATAri), F2003f::F5)
+      .addReg(F2003f::F5)
+      .addImm(Amount);
+    }
+  }
+  return MBB.erase(I);
+}
+
+// FIXME
+bool F2003fFrameLowering::canSimplifyCallFramePseudos(const MachineFunction &MF) const {
+  return true;
 }

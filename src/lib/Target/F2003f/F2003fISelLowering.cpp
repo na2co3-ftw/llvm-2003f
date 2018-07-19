@@ -14,6 +14,7 @@
 #include "F2003fISelLowering.h"
 #include "F2003f.h"
 #include "F2003fMachineFunctionInfo.h"
+#include "F2003fRegisterInfo.h"
 #include "F2003fSubtarget.h"
 #include "F2003fTargetMachine.h"
 #include "llvm/CodeGen/CallingConvLower.h"
@@ -40,7 +41,7 @@ using namespace llvm;
 
 F2003fTargetLowering::F2003fTargetLowering(const TargetMachine &TM,
                                            const F2003fSubtarget &STI)
-    : TargetLowering(TM) {
+    : TargetLowering(TM), Subtarget(&STI) {
 
   // Set up the register classes.
   addRegisterClass(MVT::i32, &F2003f::RegRegClass);
@@ -76,6 +77,13 @@ F2003fTargetLowering::F2003fTargetLowering(const TargetMachine &TM,
 //                      Calling Convention Implementation
 //===----------------------------------------------------------------------===//
 
+// |          |          |          |12           CCInfo.getNextStackOffset()
+// |0         |4         |8         |             ArgLocs[i].getLocMemOffset()
+// +----------+----------+----------+-----------+
+// | i32 arg1 | i32 arg2 | i32 arg3 |return addr| Stack
+// +----------+----------+----------+-----------+
+// |     f5+12|      f5+8|      f5+4|         f5| Address
+
 #include "F2003fGenCallingConv.inc"
 
 SDValue F2003fTargetLowering::LowerFormalArguments(
@@ -92,6 +100,8 @@ SDValue F2003fTargetLowering::LowerFormalArguments(
   CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), ArgLocs,
                  *DAG.getContext());
   CCInfo.AnalyzeArguments(Ins, CC_F2003f);
+
+  unsigned NumBytes = CCInfo.getNextStackOffset() + 4;
 
   // Create frame index for the start of the first vararg value
   if (isVarArg) {
@@ -126,15 +136,17 @@ SDValue F2003fTargetLowering::LowerFormalArguments(
       SDValue InVal;
       ISD::ArgFlagsTy Flags = Ins[i].Flags;
 
+      unsigned offset = NumBytes - VA.getLocMemOffset() - VA.getLocVT().getSizeInBits()/8;
+
       if (Flags.isByVal()) {
         int FI = MFI.CreateFixedObject(Flags.getByValSize(),
-                                       VA.getLocMemOffset(), true);
+                                       offset, true);
         InVal = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
       } else {
         // Load the argument to a virtual register
         unsigned ObjSize = VA.getLocVT().getSizeInBits()/8;
         // Create the frame index object for this incoming parameter...
-        int FI = MFI.CreateFixedObject(ObjSize, VA.getLocMemOffset(), true);
+        int FI = MFI.CreateFixedObject(ObjSize, offset, true);
 
         // Create the SelectionDAG nodes corresponding to a load
         //from this parameter
@@ -175,9 +187,11 @@ F2003fTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   CCInfo.AnalyzeCallOperands(Outs, CC_F2003f);
 
   // Get a count of how many bytes are to be pushed on the stack.
-  unsigned NumBytes = CCInfo.getNextStackOffset();
+  unsigned NumBytes = CCInfo.getNextStackOffset() + 4;
   auto PtrVT = getPointerTy(DAG.getDataLayout());
 
+  // Adjust the stack pointer for the new arguments...
+  // These operations are automatically eliminated by the prolog/epilog pass
   Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, dl);
 
   SmallVector<std::pair<unsigned, SDValue>, 4> RegsToPass;
@@ -215,9 +229,10 @@ F2003fTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       if (!StackPtr.getNode())
         StackPtr = DAG.getCopyFromReg(Chain, dl, F2003f::F5, PtrVT);
 
+      unsigned offset = NumBytes - VA.getLocMemOffset() - VA.getLocVT().getSizeInBits()/8;
       SDValue PtrOff =
           DAG.getNode(ISD::ADD, dl, PtrVT, StackPtr,
-                      DAG.getIntPtrConstant(VA.getLocMemOffset(), dl));
+                      DAG.getIntPtrConstant(offset, dl));
 
       SDValue MemOp;
       ISD::ArgFlagsTy Flags = Outs[i].Flags;
@@ -273,6 +288,10 @@ F2003fTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i)
     Ops.push_back(DAG.getRegister(RegsToPass[i].first,
                                   RegsToPass[i].second.getValueType()));
+
+  // Add a register mask operand representing the call-preserved registers.
+  const F2003fRegisterInfo *TRI = Subtarget->getRegisterInfo();
+  Ops.push_back(DAG.getRegisterMask(TRI->getCallPreservedMask(DAG.getMachineFunction(), CallConv)));
 
   if (InFlag.getNode())
     Ops.push_back(InFlag);

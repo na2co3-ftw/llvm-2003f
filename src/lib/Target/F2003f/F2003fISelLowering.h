@@ -41,6 +41,8 @@ namespace llvm {
     const char *getTargetNodeName(unsigned Opcode) const override;
 
   private:
+    const F2003fSubtarget *Subtarget;
+
     SDValue LowerCallResult(SDValue Chain, SDValue InFlag,
                             CallingConv::ID CallConv, bool isVarArg,
                             const SmallVectorImpl<ISD::InputArg> &Ins,

@@ -77,14 +77,33 @@ void F2003fDAGToDAGISel::Select(SDNode *Node) {
 bool F2003fDAGToDAGISel::SelectAddr(SDValue N,
                                     SDValue &Base, SDValue &DispReg, SDValue &DispImm) {
   EVT VT = N.getValueType();
+  // FIXME: Use reg+reg@ if possible
+  DispReg = CurDAG->getRegister(0, VT);
 
-  if (FrameIndexSDNode *FIN = dyn_cast<FrameIndexSDNode>(N)) {
-    Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), VT);
-    DispReg = CurDAG->getRegister(0, VT);
-    DispImm = CurDAG->getTargetConstant(0, SDLoc(N), VT);
-    return true;
+  if (N.getOpcode() == ISD::ADD || N.getOpcode() == ISD::SUB) {
+    if (ConstantSDNode *RHS = dyn_cast<ConstantSDNode>(N.getOperand(1))) {
+      int RHSC = (int)RHS->getSExtValue();
+      if (N.getOpcode() == ISD::SUB)
+        RHSC = -RHSC;
+
+      Base   = N.getOperand(0);
+      if (Base.getOpcode() == ISD::FrameIndex) {
+        int FI = cast<FrameIndexSDNode>(Base)->getIndex();
+        Base = CurDAG->getTargetFrameIndex(FI, TLI->getPointerTy(CurDAG->getDataLayout()));
+      }
+      DispImm = CurDAG->getTargetConstant(RHSC, SDLoc(N), MVT::i32);
+      return true;
+    }
   }
 
-  llvm_unreachable("Unknown pattern");
+  // Base only.
+  if (N.getOpcode() == ISD::FrameIndex) {
+    // Match frame index.
+    int FI = cast<FrameIndexSDNode>(N)->getIndex();
+    Base = CurDAG->getTargetFrameIndex(FI, TLI->getPointerTy(CurDAG->getDataLayout()));
+  } else {
+    Base = N;
+  }
+  DispImm  = CurDAG->getTargetConstant(0, SDLoc(N), MVT::i32);
   return true;
 }

@@ -69,10 +69,7 @@ F2003fRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
 
   int Offset = MF.getFrameInfo().getObjectOffset(FrameIndex);
-
-  DEBUG(dbgs() << "[eliminateFrameIndex] Index:" << FrameIndex
-        << ", Fffset:" << Offset << ", StackSize:" << MF.getFrameInfo().getStackSize() << "\n");
-  Offset += 4 + MF.getFrameInfo().getStackSize();
+  Offset += MF.getFrameInfo().getStackSize();
 
   // Fold imm into offset
   if (MI.getOperand(FIOperandNum + 2).isImm()) {

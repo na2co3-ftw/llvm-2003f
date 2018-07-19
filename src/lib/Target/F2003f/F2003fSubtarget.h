@@ -55,7 +55,7 @@ public:
   const F2003fInstrInfo *getInstrInfo() const override {
     return &InstrInfo;
   }
-  const TargetRegisterInfo *getRegisterInfo() const override {
+  const F2003fRegisterInfo *getRegisterInfo() const override {
     return &InstrInfo.getRegisterInfo();
   }
   const F2003fTargetLowering *getTargetLowering() const override {
