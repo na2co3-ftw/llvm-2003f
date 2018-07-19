@@ -23,7 +23,7 @@ protected:
 
 public:
   explicit F2003fFrameLowering()
-      : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, 4, -4) {}
+      : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, 4, 0) {}
 
   /// emitProlog/emitEpilog - These methods insert prolog and epilog code into
   /// the function.

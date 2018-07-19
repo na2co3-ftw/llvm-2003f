@@ -49,6 +49,7 @@ void F2003fFrameLowering::emitPrologue(MachineFunction &MF,
 
   if (StackSize) {
     BuildMI(MBB, MBBI, DL, TII.get(F2003f::NTAri), F2003f::F5)
+    .addReg(F2003f::F5)
     .addImm(StackSize);
   }
 }
@@ -67,6 +68,7 @@ void F2003fFrameLowering::emitEpilogue(MachineFunction &MF,
 
   if (StackSize) {
     BuildMI(MBB, MBBI, DL, TII.get(F2003f::ATAri), F2003f::F5)
+    .addReg(F2003f::F5)
     .addImm(StackSize);
   }
 }
