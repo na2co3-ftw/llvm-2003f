@@ -72,31 +72,37 @@ void F2003fDAGToDAGISel::Select(SDNode *Node) {
 }
 
 /// SelectAddr - returns true if it is able pattern match an addressing mode.
-/// It returns the operands which make up the maximal addressing mode it can
-/// match by reference.
 bool F2003fDAGToDAGISel::SelectAddr(SDValue N,
                                     SDValue &Base, SDValue &DispReg, SDValue &DispImm) {
   EVT VT = N.getValueType();
-  // FIXME: Use reg+reg@ if possible
-  DispReg = CurDAG->getRegister(0, VT);
 
+  // reg+imm@
   if (N.getOpcode() == ISD::ADD || N.getOpcode() == ISD::SUB) {
     if (ConstantSDNode *RHS = dyn_cast<ConstantSDNode>(N.getOperand(1))) {
       int RHSC = (int)RHS->getSExtValue();
       if (N.getOpcode() == ISD::SUB)
         RHSC = -RHSC;
 
-      Base   = N.getOperand(0);
+      Base = N.getOperand(0);
       if (Base.getOpcode() == ISD::FrameIndex) {
         int FI = cast<FrameIndexSDNode>(Base)->getIndex();
         Base = CurDAG->getTargetFrameIndex(FI, TLI->getPointerTy(CurDAG->getDataLayout()));
       }
+      DispReg = CurDAG->getRegister(0, VT);
       DispImm = CurDAG->getTargetConstant(RHSC, SDLoc(N), MVT::i32);
       return true;
     }
   }
 
-  // Base only.
+  // reg+reg@
+  if (N.getOpcode() == ISD::ADD) {
+    Base = N.getOperand(0);
+    DispReg = N.getOperand(1);
+    DispImm  = CurDAG->getTargetConstant(0, SDLoc(N), MVT::i32);
+    return true;
+  }
+
+  // reg@
   if (N.getOpcode() == ISD::FrameIndex) {
     // Match frame index.
     int FI = cast<FrameIndexSDNode>(N)->getIndex();
@@ -104,6 +110,7 @@ bool F2003fDAGToDAGISel::SelectAddr(SDValue N,
   } else {
     Base = N;
   }
+  DispReg = CurDAG->getRegister(0, VT);
   DispImm  = CurDAG->getTargetConstant(0, SDLoc(N), MVT::i32);
   return true;
 }
