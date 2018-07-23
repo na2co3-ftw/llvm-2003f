@@ -63,8 +63,10 @@ void F2003fInstPrinter::printMem(const MCInst *MI, unsigned OpNo, raw_ostream &O
   }
 
   if (dispImm.isImm()) {
-    O << '+';
-    printOperand(MI, OpNo+2, O);
+    if (dispImm.getImm()) {
+      O << '+';
+      printOperand(MI, OpNo+2, O);
+    }
   } else {
     O << '+';
     assert(dispImm.isExpr() && "Expected immediate");
