@@ -234,6 +234,8 @@ def ADJCALLSTACKUP   : PseudoI<(outs), (ins i32imm:$amt1, i32imm:$amt2),
                                [(F2003fcallseq_end timm:$amt1, timm:$amt2)]>;
 }
 
+def ATAframe : PseudoI<(outs Reg:$dst), (ins i32imm:$base, i32imm:$offset), []>;
+
 //===----------------------------------------------------------------------===//
 // DAG Pattern Matching Rules
 //===----------------------------------------------------------------------===//

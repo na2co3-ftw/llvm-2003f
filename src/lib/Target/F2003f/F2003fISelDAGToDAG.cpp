@@ -67,6 +67,25 @@ FunctionPass *llvm::createF2003fISelDag(F2003fTargetMachine &TM,
 }
 
 void F2003fDAGToDAGISel::Select(SDNode *Node) {
+  SDLoc dl(Node);
+
+  if (Node->isMachineOpcode()) {
+    Node->setNodeId(-1);
+    return;   // Already selected.
+  }
+
+  switch (Node->getOpcode()) {
+  default: break;
+  case ISD::FrameIndex: {
+    // FrameIndex that does not match 2003f addressing mode into ATAframe pseudo inst
+    int FI = cast<FrameIndexSDNode>(Node)->getIndex();
+    SDValue TFI = CurDAG->getTargetFrameIndex(FI, TLI->getPointerTy(CurDAG->getDataLayout()));
+    CurDAG->SelectNodeTo(Node, F2003f::ATAframe, MVT::i32, TFI,
+                         CurDAG->getTargetConstant(0, dl, MVT::i16));
+    return;
+  }
+  }
+
   // Select the default instruction
   SelectCode(Node);
 }
@@ -102,7 +121,7 @@ bool F2003fDAGToDAGISel::SelectAddr(SDValue N,
     return true;
   }
 
-  // reg@
+  // reg@ (may become reg+imm@ when it is a frame index)
   if (N.getOpcode() == ISD::FrameIndex) {
     // Match frame index.
     int FI = cast<FrameIndexSDNode>(N)->getIndex();

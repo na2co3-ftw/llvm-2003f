@@ -18,6 +18,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
@@ -66,10 +67,32 @@ F2003fRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   MachineInstr &MI = *II;
   MachineBasicBlock &MBB = *MI.getParent();
   MachineFunction &MF = *MBB.getParent();
+  DebugLoc dl = MI.getDebugLoc();
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
 
   int Offset = MF.getFrameInfo().getObjectOffset(FrameIndex);
   Offset += MF.getFrameInfo().getStackSize();
+
+  if (MI.getOpcode() == F2003f::ATAframe) {
+    // Convert ATAframe <fi> <offset> to KRZ F5 and ATA
+    Offset += MI.getOperand(FIOperandNum + 1).getImm();
+
+    const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+
+    MI.setDesc(TII.get(F2003f::KRZrr));
+    MI.getOperand(FIOperandNum).ChangeToRegister(F2003f::F5, false);
+    MI.RemoveOperand(FIOperandNum + 1);
+
+    if (Offset == 0) {
+      return;
+    }
+
+    unsigned DstReg = MI.getOperand(0).getReg();
+    BuildMI(MBB, std::next(II), dl, TII.get(F2003f::ATAri), DstReg)
+      .addReg(DstReg)
+      .addImm(Offset);
+    return;
+  }
 
   // Fold imm into offset
   if (MI.getOperand(FIOperandNum + 2).isImm()) {
