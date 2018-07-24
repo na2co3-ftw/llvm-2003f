@@ -99,8 +99,3 @@ MachineBasicBlock::iterator F2003fFrameLowering::eliminateCallFramePseudoInstr(
   }
   return MBB.erase(I);
 }
-
-// FIXME
-bool F2003fFrameLowering::canSimplifyCallFramePseudos(const MachineFunction &MF) const {
-  return true;
-}

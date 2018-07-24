@@ -62,8 +62,6 @@ void
 F2003fRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                                         int SPAdj, unsigned FIOperandNum,
                                         RegScavenger *RS) const {
-  assert(SPAdj == 0 && "Unexpected");
-
   MachineInstr &MI = *II;
   MachineBasicBlock &MBB = *MI.getParent();
   MachineFunction &MF = *MBB.getParent();
@@ -72,6 +70,7 @@ F2003fRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   int Offset = MF.getFrameInfo().getObjectOffset(FrameIndex);
   Offset += MF.getFrameInfo().getStackSize();
+  Offset += SPAdj;
 
   if (MI.getOpcode() == F2003f::ATAframe) {
     // Convert ATAframe <fi> <offset> to KRZ F5 and ATA

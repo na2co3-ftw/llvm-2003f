@@ -34,8 +34,6 @@ public:
     MachineFunction &MF, MachineBasicBlock &MBB,
     MachineBasicBlock::iterator I) const override;
 
-  bool canSimplifyCallFramePseudos(const MachineFunction &MF) const override;
-
   bool hasFP(const MachineFunction &MF) const override;
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
 };
