@@ -34,7 +34,7 @@ F2003fMCAsmInfo::F2003fMCAsmInfo(const Triple &TT) {
   // Data16bitsDirective = "\t.short\t";
   // Data32bitsDirective = "\t.long\t";
   // Data64bitsDirective = "\t.quad\t";
-  // GlobalDirective = "\t.globl\t";
+  GlobalDirective = "kue ";
   HasFunctionAlignment = false;
   HasDotTypeDotSizeDirective = false;
   HasSingleParameterDotFile = false;

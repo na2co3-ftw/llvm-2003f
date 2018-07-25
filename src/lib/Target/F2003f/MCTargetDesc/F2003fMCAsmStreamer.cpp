@@ -190,10 +190,20 @@ void F2003fMCAsmStreamer::EmitWeakReference(MCSymbol *Alias, const MCSymbol *Sym
   llvm_unreachable("2003lk doesn't support this directive");
 }
 
-// .type .globl .hidden .indirect_symbol .internal .lazy_reference .local .no_dead_strip .symbol_resolver
+// .type .hidden .indirect_symbol .internal .lazy_reference .local .no_dead_strip .symbol_resolver
 // .alt_entry .private_extern .protected .reference .weak .weak_definition .weak_def_can_be_hidden
 bool F2003fMCAsmStreamer::EmitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) {
-  return false;
+  switch (Attribute) {
+  default: return false;
+  case MCSA_Global: // xok
+    OS << MAI->getGlobalDirective();
+    break;
+  }
+
+  Symbol->print(OS, MAI);
+  EmitEOL();
+
+  return true;
 }
 
 void F2003fMCAsmStreamer::EmitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) { // .desc
