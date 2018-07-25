@@ -34,6 +34,12 @@ bool F2003fFrameLowering::hasReservedCallFrame(const MachineFunction &MF) const 
   return false;
 }
 
+// Force PrologEpilogInserter to call eliminateCallFramePseudoInstr
+bool F2003fFrameLowering::needsFrameIndexResolution(const MachineFunction &MF) const {
+  return TargetFrameLowering::needsFrameIndexResolution(MF) ||
+    !canSimplifyCallFramePseudos(MF);
+}
+
 void F2003fFrameLowering::emitPrologue(MachineFunction &MF,
                                        MachineBasicBlock &MBB) const {
   assert(&MF.front() == &MBB && "Shrink-wrapping not yet supported");
