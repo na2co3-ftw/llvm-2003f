@@ -65,6 +65,7 @@ public:
   }
 
   bool addInstSelector() override;
+  void addPreEmitPass() override;
 };
 } // namespace
 
@@ -76,6 +77,12 @@ bool F2003fPassConfig::addInstSelector() {
   // Install an instruction selector.
   addPass(createF2003fISelDag(getF2003fTargetMachine(), getOptLevel()));
   return false;
+}
+
+// This pass may be implemented by targets that want to run passes
+// immediately before machine code is emitted.
+void F2003fPassConfig::addPreEmitPass() {
+  addPass(createF2003fFiMalkrzPass());
 }
 
 MCStreamer *F2003fTargetMachine::createMCStreamerToAsm(MCContext &Context, std::unique_ptr<formatted_raw_ostream>FOut,

@@ -75,3 +75,8 @@ void F2003fInstPrinter::printMem(const MCInst *MI, unsigned OpNo, raw_ostream &O
 
   O << '@';
 }
+
+void F2003fInstPrinter::printCC(const MCInst *MI, unsigned OpNo, raw_ostream &O) {
+  F2003fCC::CondCode CC = (F2003fCC::CondCode)MI->getOperand(OpNo).getImm();
+  O << F2003fCCToString(CC);
+}

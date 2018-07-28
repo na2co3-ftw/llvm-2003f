@@ -20,6 +20,11 @@ def SDT_F2003fCallSeqStart : SDCallSeqStart<[ SDTCisVT<0, i32>, SDTCisVT<1, i32>
 def SDT_F2003fCallSeqEnd : SDCallSeqEnd<[ SDTCisVT<0, i32>, SDTCisVT<1, i32> ]>;
 def SDT_F2003fCall : SDTypeProfile<0, 1, [SDTCisVT<0, iPTR>]>;
 
+def SDT_F2003fSelectCC : SDTypeProfile<1, 5, [
+  SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>, SDTCisSameAs<3, 4>,
+  SDTCisVT<5, i8>
+]>;
+
 // Node definitions.
 def F2003fcallseq_start : SDNode<"ISD::CALLSEQ_START", SDT_F2003fCallSeqStart,
                               [SDNPHasChain, SDNPSideEffect, SDNPOutGlue]>;
@@ -30,6 +35,9 @@ def F2003fFenxeo : SDNode<"F2003fISD::FENXEO", SDT_F2003fCall,
                           [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue, SDNPVariadic]>;
 def F2003fDosnud : SDNode<"F2003fISD::DOSNUD", SDTNone,
                           [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+
+def F2003fselectcc : SDNode<"F2003fISD::SELECT_CC" , SDT_F2003fSelectCC>;
+// def F2003fbrcc     : SDNode<"F2003fISD::BR_CC"     , SDTBrCC, [SDNPHasChain]>;
 
 //===----------------------------------------------------------------------===//
 //  2003f specific transformation functions and pattern fragments.
@@ -50,6 +58,10 @@ def mem : Operand<iPTR> {
 }
 
 def addr : ComplexPattern<iPTR, 3, "SelectAddr", [], []>;
+
+def cc : Operand<i8> {
+  let PrintMethod = "printCC";
+}
 
 //===----------------------------------------------------------------------===//
 // Instructions
@@ -91,7 +103,17 @@ def KRZmm : I<(outs), (ins mem:$dst, mem:$src), "krz $dst $src",
 def KRZmi : I<(outs), (ins mem:$dst, i32imm:$src), "krz $dst $src",
               [(store (i32 imm:$src), addr:$dst)]>;
 
-//def MALKRZ : Instruction;
+let hasSideEffects = 0 in {
+  let Constraints = "$src1 = $dst" in {
+    def MALKRZrr : I<(outs Reg:$dst), (ins Reg:$src1, Reg:$src2), "malkrz $dst $src2", []>;
+    def MALKRZrm : I<(outs Reg:$dst), (ins Reg:$src1, mem:$src2), "malkrz $dst $src2", []>;
+    def MALKRZri : I<(outs Reg:$dst), (ins Reg:$src1, i32imm:$src2), "malkrz $dst $src2", []>;
+  }
+  def MALKRZmr : I<(outs), (ins mem:$dst, Reg:$src), "malkrz $dst $src", []>;
+  def MALKRZmm : I<(outs), (ins mem:$dst, mem:$src), "malkrz $dst $src", []>;
+  def MALKRZmi : I<(outs), (ins mem:$dst, i32imm:$src), "malkrz $dst $src", []>;
+}
+
 //def INJ : Instruction;
 
 let hasSideEffects = 0 in
@@ -203,7 +225,83 @@ defm LAT    : MulOp<"lat"   , mul, umullohi>;
 defm LATSNA : MulOp<"latsna", mul, smullohi>;
 
 // Comparison Instructions.
-//def FI : Instruction;
+let hasSideEffects = 0 in {
+  def FIrr : I<(outs), (ins Reg:$lhs,    Reg:$rhs,    cc:$cc), "fi $lhs $rhs $cc", []>;
+  def FIrm : I<(outs), (ins Reg:$lhs,    mem:$rhs,    cc:$cc), "fi $lhs $rhs $cc", []>;
+  def FIri : I<(outs), (ins Reg:$lhs,    i32imm:$rhs, cc:$cc), "fi $lhs $rhs $cc", []>;
+  def FImr : I<(outs), (ins mem:$lhs,    Reg:$rhs,    cc:$cc), "fi $lhs $rhs $cc", []>;
+  def FImm : I<(outs), (ins mem:$lhs,    mem:$rhs,    cc:$cc), "fi $lhs $rhs $cc", []>;
+  def FImi : I<(outs), (ins mem:$lhs,    i32imm:$rhs, cc:$cc), "fi $lhs $rhs $cc", []>;
+  def FIir : I<(outs), (ins i32imm:$lhs, Reg:$rhs,    cc:$cc), "fi $lhs $rhs $cc", []>;
+  def FIim : I<(outs), (ins i32imm:$lhs, mem:$rhs,    cc:$cc), "fi $lhs $rhs $cc", []>;
+  def FIii : I<(outs), (ins i32imm:$lhs, i32imm:$rhs, cc:$cc), "fi $lhs $rhs $cc", []>;
+}
+
+let Constraints = "$src1 = $dst" in {
+  def FIrr_MALKRZrr : PseudoI<(outs Reg:$dst), (ins Reg:$src1, Reg:$src2, Reg:$lhs, Reg:$rhs, cc:$cc),
+                              [(set Reg:$dst, (F2003fselectcc Reg:$src1, Reg:$src2, Reg:$lhs, Reg:$rhs, timm:$cc))]>;
+  def FIrm_MALKRZrr : PseudoI<(outs Reg:$dst), (ins Reg:$src1, Reg:$src2, Reg:$lhs, mem:$rhs, cc:$cc),
+                              [(set Reg:$dst, (F2003fselectcc Reg:$src1, Reg:$src2, Reg:$lhs, (load addr:$rhs), timm:$cc))]>;
+  def FIri_MALKRZrr : PseudoI<(outs Reg:$dst), (ins Reg:$src1, Reg:$src2, Reg:$lhs, i32imm:$rhs, cc:$cc),
+                              [(set Reg:$dst, (F2003fselectcc Reg:$src1, Reg:$src2, Reg:$lhs, imm:$rhs, timm:$cc))]>;
+
+  def FImr_MALKRZrr : PseudoI<(outs Reg:$dst), (ins Reg:$src1, Reg:$src2, mem:$lhs, Reg:$rhs, cc:$cc),
+                              [(set Reg:$dst, (F2003fselectcc Reg:$src1, Reg:$src2, (load addr:$lhs), Reg:$rhs, timm:$cc))]>;
+  def FImm_MALKRZrr : PseudoI<(outs Reg:$dst), (ins Reg:$src1, Reg:$src2, mem:$lhs, mem:$rhs, cc:$cc),
+                              [(set Reg:$dst, (F2003fselectcc Reg:$src1, Reg:$src2, (load addr:$lhs), (i32 (load addr:$rhs)), timm:$cc))]>;
+  def FImi_MALKRZrr : PseudoI<(outs Reg:$dst), (ins Reg:$src1, Reg:$src2, mem:$lhs, i32imm:$rhs, cc:$cc),
+                              [(set Reg:$dst, (F2003fselectcc Reg:$src1, Reg:$src2, (load addr:$lhs), imm:$rhs, timm:$cc))]>;
+
+  def FIir_MALKRZrr : PseudoI<(outs Reg:$dst), (ins Reg:$src1, Reg:$src2, i32imm:$lhs, Reg:$rhs, cc:$cc),
+                              [(set Reg:$dst, (F2003fselectcc Reg:$src1, Reg:$src2, imm:$lhs, Reg:$rhs, timm:$cc))]>;
+  def FIim_MALKRZrr : PseudoI<(outs Reg:$dst), (ins Reg:$src1, Reg:$src2, i32imm:$lhs, mem:$rhs, cc:$cc),
+                              [(set Reg:$dst, (F2003fselectcc Reg:$src1, Reg:$src2, imm:$lhs, (load addr:$rhs), timm:$cc))]>;
+  def FIii_MALKRZrr : PseudoI<(outs Reg:$dst), (ins Reg:$src1, Reg:$src2, i32imm:$lhs, i32imm:$rhs, cc:$cc),
+                              [(set Reg:$dst, (F2003fselectcc Reg:$src1, Reg:$src2, imm:$lhs, imm:$rhs, timm:$cc))]>;
+
+  def FIrr_MALKRZrm : PseudoI<(outs Reg:$dst), (ins Reg:$src1, mem:$src2, Reg:$lhs, Reg:$rhs, cc:$cc),
+                              [(set Reg:$dst, (F2003fselectcc Reg:$src1, (load addr:$src2), Reg:$lhs, Reg:$rhs, timm:$cc))]>;
+  def FIrm_MALKRZrm : PseudoI<(outs Reg:$dst), (ins Reg:$src1, mem:$src2, Reg:$lhs, mem:$rhs, cc:$cc),
+                              [(set Reg:$dst, (F2003fselectcc Reg:$src1, (load addr:$src2), Reg:$lhs, (load addr:$rhs), timm:$cc))]>;
+  def FIri_MALKRZrm : PseudoI<(outs Reg:$dst), (ins Reg:$src1, mem:$src2, Reg:$lhs, i32imm:$rhs, cc:$cc),
+                              [(set Reg:$dst, (F2003fselectcc Reg:$src1, (load addr:$src2), Reg:$lhs, imm:$rhs, timm:$cc))]>;
+
+  def FImr_MALKRZrm : PseudoI<(outs Reg:$dst), (ins Reg:$src1, mem:$src2, mem:$lhs, Reg:$rhs, cc:$cc),
+                              [(set Reg:$dst, (F2003fselectcc Reg:$src1, (load addr:$src2), (load addr:$lhs), Reg:$rhs, timm:$cc))]>;
+  def FImm_MALKRZrm : PseudoI<(outs Reg:$dst), (ins Reg:$src1, mem:$src2, mem:$lhs, mem:$rhs, cc:$cc),
+                              [(set Reg:$dst, (F2003fselectcc Reg:$src1, (load addr:$src2), (load addr:$lhs), (i32 (load addr:$rhs)), timm:$cc))]>;
+  def FImi_MALKRZrm : PseudoI<(outs Reg:$dst), (ins Reg:$src1, mem:$src2, mem:$lhs, i32imm:$rhs, cc:$cc),
+                              [(set Reg:$dst, (F2003fselectcc Reg:$src1, (load addr:$src2), (load addr:$lhs), imm:$rhs, timm:$cc))]>;
+
+  def FIir_MALKRZrm : PseudoI<(outs Reg:$dst), (ins Reg:$src1, mem:$src2, i32imm:$lhs, Reg:$rhs, cc:$cc),
+                              [(set Reg:$dst, (F2003fselectcc Reg:$src1, (load addr:$src2), imm:$lhs, Reg:$rhs, timm:$cc))]>;
+  def FIim_MALKRZrm : PseudoI<(outs Reg:$dst), (ins Reg:$src1, mem:$src2, i32imm:$lhs, mem:$rhs, cc:$cc),
+                              [(set Reg:$dst, (F2003fselectcc Reg:$src1, (load addr:$src2), imm:$lhs, (load addr:$rhs), timm:$cc))]>;
+  def FIii_MALKRZrm : PseudoI<(outs Reg:$dst), (ins Reg:$src1, mem:$src2, i32imm:$lhs, i32imm:$rhs, cc:$cc),
+                              [(set Reg:$dst, (F2003fselectcc Reg:$src1, (load addr:$src2), imm:$lhs, imm:$rhs, timm:$cc))]>;
+
+  def FIrr_MALKRZri : PseudoI<(outs Reg:$dst), (ins Reg:$src1, i32imm:$src2, Reg:$lhs, Reg:$rhs, cc:$cc),
+                              [(set Reg:$dst, (F2003fselectcc Reg:$src1, imm:$src2, Reg:$lhs, Reg:$rhs, timm:$cc))]>;
+  def FIrm_MALKRZri : PseudoI<(outs Reg:$dst), (ins Reg:$src1, i32imm:$src2, Reg:$lhs, mem:$rhs, cc:$cc),
+                              [(set Reg:$dst, (F2003fselectcc Reg:$src1, imm:$src2, Reg:$lhs, (load addr:$rhs), timm:$cc))]>;
+  def FIri_MALKRZri : PseudoI<(outs Reg:$dst), (ins Reg:$src1, i32imm:$src2, Reg:$lhs, i32imm:$rhs, cc:$cc),
+                              [(set Reg:$dst, (F2003fselectcc Reg:$src1, imm:$src2, Reg:$lhs, imm:$rhs, timm:$cc))]>;
+
+  def FImr_MALKRZri : PseudoI<(outs Reg:$dst), (ins Reg:$src1, i32imm:$src2, mem:$lhs, Reg:$rhs, cc:$cc),
+                              [(set Reg:$dst, (F2003fselectcc Reg:$src1, imm:$src2, (load addr:$lhs), Reg:$rhs, timm:$cc))]>;
+  def FImm_MALKRZri : PseudoI<(outs Reg:$dst), (ins Reg:$src1, i32imm:$src2, mem:$lhs, mem:$rhs, cc:$cc),
+                              [(set Reg:$dst, (F2003fselectcc Reg:$src1, imm:$src2, (load addr:$lhs), (i32 (load addr:$rhs)), timm:$cc))]>;
+  def FImi_MALKRZri : PseudoI<(outs Reg:$dst), (ins Reg:$src1, i32imm:$src2, mem:$lhs, i32imm:$rhs, cc:$cc),
+                              [(set Reg:$dst, (F2003fselectcc Reg:$src1, imm:$src2, (load addr:$lhs), imm:$rhs, timm:$cc))]>;
+
+  def FIir_MALKRZri : PseudoI<(outs Reg:$dst), (ins Reg:$src1, i32imm:$src2, i32imm:$lhs, Reg:$rhs, cc:$cc),
+                              [(set Reg:$dst, (F2003fselectcc Reg:$src1, imm:$src2, imm:$lhs, Reg:$rhs, timm:$cc))]>;
+  def FIim_MALKRZri : PseudoI<(outs Reg:$dst), (ins Reg:$src1, i32imm:$src2, i32imm:$lhs, mem:$rhs, cc:$cc),
+                              [(set Reg:$dst, (F2003fselectcc Reg:$src1, imm:$src2, imm:$lhs, (load addr:$rhs), timm:$cc))]>;
+  def FIii_MALKRZri : PseudoI<(outs Reg:$dst), (ins Reg:$src1, i32imm:$src2, i32imm:$lhs, i32imm:$rhs, cc:$cc),
+                              [(set Reg:$dst, (F2003fselectcc Reg:$src1, imm:$src2, imm:$lhs, imm:$rhs, timm:$cc))]>;
+
+}
 
 // Control Flow Instructions.
 // F5 is marked as a use to prevent stack-pointer assignments that appear

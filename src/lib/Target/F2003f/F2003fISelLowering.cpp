@@ -66,11 +66,24 @@ F2003fTargetLowering::F2003fTargetLowering(const TargetMachine &TM,
     setLoadExtAction(ISD::ZEXTLOAD, VT, MVT::i16, Promote);
   }
 
-  setOperationAction(ISD::MULHS, MVT::i32, Expand);
-  setOperationAction(ISD::MULHU, MVT::i32, Expand);
+  setOperationAction(ISD::MULHS, MVT::i32, Expand); // to SMUL_LOHI
+  setOperationAction(ISD::MULHU, MVT::i32, Expand); // to UMUL_LOHI
+
+  setOperationAction(ISD::SETCC,     MVT::i32, Expand); // to SELECT_CC
+  setOperationAction(ISD::SELECT,    MVT::i32, Expand); // to SELECT_CC
+  setOperationAction(ISD::SELECT_CC, MVT::i32, Custom);
 
   // setMinFunctionAlignment(0);
   // setPrefFunctionAlignment(0);
+}
+
+SDValue F2003fTargetLowering::LowerOperation(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  switch (Op.getOpcode()) {
+  case ISD::SELECT_CC:        return LowerSELECT_CC(Op, DAG);
+  default:
+    llvm_unreachable("unimplemented operand");
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -390,11 +403,47 @@ SDValue F2003fTargetLowering::LowerCallResult(
   return Chain;
 }
 
+
+static F2003fCC::CondCode getF2003fCC(ISD::CondCode CC) {
+  switch(CC) {
+  case ISD::SETUGT: return F2003fCC::LLONYS;
+  case ISD::SETULE: return F2003fCC::XTLONYS;
+  case ISD::SETUGE: return F2003fCC::XOLONYS;
+  case ISD::SETULT: return F2003fCC::XYLONYS;
+  case ISD::SETEQ:  return F2003fCC::CLO;
+  case ISD::SETNE:  return F2003fCC::NIV;
+  case ISD::SETGT:  return F2003fCC::LLO;
+  case ISD::SETLE:  return F2003fCC::XTLO;
+  case ISD::SETGE:  return F2003fCC::XOLO;
+  case ISD::SETLT:  return F2003fCC::XYLO;
+  default:
+    llvm_unreachable("unimplemented CondCode");
+  }
+}
+
+SDValue F2003fTargetLowering::LowerSELECT_CC(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  SDValue LHS    = Op.getOperand(0);
+  SDValue RHS    = Op.getOperand(1);
+  SDValue TrueV  = Op.getOperand(2);
+  SDValue FalseV = Op.getOperand(3);
+  EVT VT         = Op.getValueType();
+  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(4))->get();
+  SDLoc dl   (Op);
+
+  SDValue TargetCC = DAG.getTargetConstant(getF2003fCC(CC), dl, MVT::i8);
+
+  SDValue Ops[] = {FalseV, TrueV, LHS, RHS, TargetCC};
+  return DAG.getNode(F2003fISD::SELECT_CC, dl, VT, Ops);
+}
+
+
 const char *F2003fTargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch ((F2003fISD::NodeType)Opcode) {
   case F2003fISD::FIRST_NUMBER:       break;
   case F2003fISD::FENXEO:             return "F2003fISD::FENXEO";
   case F2003fISD::DOSNUD:             return "F2003fISD::DOSNUD";
+  case F2003fISD::SELECT_CC:          return "F2003fISD::SELECT_CC";
   }
   return nullptr;
 }

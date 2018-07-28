@@ -55,9 +55,14 @@ namespace {
 void F2003fAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   F2003fMCInstLower MCInstLowering(OutContext, *this);
 
-  MCInst TmpInst;
-  MCInstLowering.Lower(MI, TmpInst);
-  EmitToStreamer(*OutStreamer, TmpInst);
+  MachineBasicBlock::const_instr_iterator I = MI->getIterator();
+  MachineBasicBlock::const_instr_iterator E = MI->getParent()->instr_end();
+
+  do {
+    MCInst TmpInst;
+    MCInstLowering.Lower(&*I, TmpInst);
+    EmitToStreamer(*OutStreamer, TmpInst);
+  } while ((++I != E) && I->isInsideBundle());
 }
 
 void F2003fAsmPrinter::EmitStartOfAsmFile(Module &module) {

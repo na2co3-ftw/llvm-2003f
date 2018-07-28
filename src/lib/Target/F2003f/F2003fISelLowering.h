@@ -23,7 +23,8 @@ namespace llvm {
   namespace F2003fISD {
     enum NodeType : unsigned {
       FIRST_NUMBER = ISD::BUILTIN_OP_END,
-      FENXEO, DOSNUD
+      FENXEO, DOSNUD,
+      SELECT_CC
     };
   }
 
@@ -34,7 +35,9 @@ namespace llvm {
                                   const F2003fSubtarget &STI);
 
     /// LowerOperation - Provide custom lowering hooks for some operations.
-    // SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
+    SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
+
+    SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const;
 
     /// getTargetNodeName - This method returns the name of a target specific
     /// DAG node.

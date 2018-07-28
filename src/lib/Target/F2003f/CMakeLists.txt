@@ -13,6 +13,7 @@ add_public_tablegen_target(F2003fCommonTableGen)
 
 add_llvm_target(F2003fCodeGen
   F2003fAsmPrinter.cpp
+  F2003fFiMalkrz.cpp
   F2003fFrameLowering.cpp
   F2003fMachineFunctionInfo.cpp
   F2003fInstrInfo.cpp
