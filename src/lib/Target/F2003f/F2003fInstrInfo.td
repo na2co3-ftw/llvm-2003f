@@ -114,7 +114,34 @@ let hasSideEffects = 0 in {
   def MALKRZmi : I<(outs), (ins mem:$dst, i32imm:$src), "malkrz $dst $src", []>;
 }
 
-//def INJ : Instruction;
+let hasSideEffects = 0 in {
+  let Constraints = "$src1 = $dst2" in {
+    def INJrrr : I<(outs Reg:$dst1, Reg:$dst2), (ins Reg:$src1, Reg:$src2), "inj $dst1 $dst2 $src2", []>;
+
+    let mayLoad = 1 in
+    def INJrrm : I<(outs Reg:$dst1, Reg:$dst2), (ins Reg:$src1, mem:$src2), "inj $dst1 $dst2 $src2", []>;
+
+    def INJrri : I<(outs Reg:$dst1, Reg:$dst2), (ins Reg:$src1, i32imm:$src2), "inj $dst1 $dst2 $src2", []>;
+
+    let mayStore = 1 in {
+      def INJmrr : I<(outs Reg:$dst2), (ins mem:$dst1, Reg:$src1, Reg:$src2), "inj $dst1 $dst2 $src2", []>;
+
+      let mayLoad = 1 in
+      def INJmrm : I<(outs Reg:$dst2), (ins mem:$dst1, Reg:$src1, mem:$src2), "inj $dst1 $dst2 $src2", []>;
+
+      def INJmri : I<(outs Reg:$dst2), (ins mem:$dst1, Reg:$src1, i32imm:$src2), "inj $dst1 $dst2 $src2", []>;
+    }
+  }
+
+  let mayLoad = 1, mayStore = 1 in {
+    def INJrmr : I<(outs Reg:$dst1), (ins mem:$dst2, Reg:$src2), "inj $dst1 $dst2 $src2", []>;
+    def INJrmm : I<(outs Reg:$dst1), (ins mem:$dst2, mem:$src2), "inj $dst1 $dst2 $src2", []>;
+    def INJrmi : I<(outs Reg:$dst1), (ins mem:$dst2, i32imm:$src2), "inj $dst1 $dst2 $src2", []>;
+    def INJmmr : I<(outs), (ins mem:$dst1, mem:$dst2, Reg:$src2), "inj $dst1 $dst2 $src2", []>;
+    def INJmmm : I<(outs), (ins mem:$dst1, mem:$dst2, mem:$src2), "inj $dst1 $dst2 $src2", []>;
+    def INJmmi : I<(outs), (ins mem:$dst1, mem:$dst2, i32imm:$src2), "inj $dst1 $dst2 $src2", []>;
+  }
+}
 
 let hasSideEffects = 0 in
 def FEN : I<(outs), (ins), "fen", []>;
