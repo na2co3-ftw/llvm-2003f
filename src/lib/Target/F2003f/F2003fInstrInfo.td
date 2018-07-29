@@ -221,8 +221,8 @@ multiclass MulOp<string mnemonic, SDPatternOperator OpNode, SDPatternOperator Op
   }
 }
 
-defm LAT    : MulOp<"lat"   , mul, umullohi>;
-defm LATSNA : MulOp<"latsna", mul, smullohi>;
+defm LAT    : MulOp<"lat", mul, umullohi>;
+defm LATSNA : MulOp<"latsna", null_frag, smullohi>;
 
 // Comparison Instructions.
 let hasSideEffects = 0 in {
