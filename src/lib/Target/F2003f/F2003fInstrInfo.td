@@ -25,6 +25,10 @@ def SDT_F2003fSelectCC : SDTypeProfile<1, 5, [
   SDTCisVT<5, i8>
 ]>;
 
+def SDT_F2003fBrCC : SDTypeProfile<0, 4, [
+  SDTCisVT<0, OtherVT>, SDTCisSameAs<1, 2>, SDTCisVT<3, i8>
+]>;
+
 // Node definitions.
 def F2003fcallseq_start : SDNode<"ISD::CALLSEQ_START", SDT_F2003fCallSeqStart,
                               [SDNPHasChain, SDNPSideEffect, SDNPOutGlue]>;
@@ -37,7 +41,7 @@ def F2003fDosnud : SDNode<"F2003fISD::DOSNUD", SDTNone,
                           [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
 def F2003fselectcc : SDNode<"F2003fISD::SELECT_CC" , SDT_F2003fSelectCC>;
-// def F2003fbrcc     : SDNode<"F2003fISD::BR_CC"     , SDTBrCC, [SDNPHasChain]>;
+def F2003fbrcc     : SDNode<"F2003fISD::BR_CC"     , SDT_F2003fBrCC, [SDNPHasChain]>;
 
 //===----------------------------------------------------------------------===//
 //  2003f specific transformation functions and pattern fragments.
@@ -62,6 +66,8 @@ def addr : ComplexPattern<iPTR, 3, "SelectAddr", [], []>;
 def cc : Operand<i8> {
   let PrintMethod = "printCC";
 }
+
+def brtarget : Operand<OtherVT>;
 
 //===----------------------------------------------------------------------===//
 // Instructions
@@ -327,10 +333,59 @@ let Constraints = "$src1 = $dst" in {
                               [(set Reg:$dst, (F2003fselectcc Reg:$src1, imm:$src2, imm:$lhs, (load addr:$rhs), timm:$cc))]>;
   def FIii_MALKRZri : PseudoI<(outs Reg:$dst), (ins Reg:$src1, i32imm:$src2, i32imm:$lhs, i32imm:$rhs, cc:$cc),
                               [(set Reg:$dst, (F2003fselectcc Reg:$src1, imm:$src2, imm:$lhs, imm:$rhs, timm:$cc))]>;
-
 }
 
+
 // Control Flow Instructions.
+let isBarrier = 1, isBranch = 1, isTerminator =1 in {
+  def KRZx : I<(outs), (ins brtarget:$dst), "krz xx $dst", [(br bb:$dst)]>;
+
+  let isIndirectBranch = 1 in {
+    def KRZxr : I<(outs), (ins Reg:$dst), "krz xx $dst", [(brind Reg:$dst)]>;
+
+    let mayLoad = 1 in
+    def KRZxm : I<(outs), (ins mem:$dst), "krz xx $dst", [(brind (load addr:$dst))]>;
+
+    def KRZxi : I<(outs), (ins i32imm:$dst), "krz xx $dst", [(brind tblockaddress:$dst)]>;
+  }
+}
+
+let isBranch = 1, isTerminator =1, hasSideEffects = 0 in {
+  def MALKRZx : I<(outs), (ins brtarget:$dst), "malkrz xx $dst", []>;
+
+  let isIndirectBranch = 1 in {
+    def MALKRZxr : I<(outs), (ins Reg:$dst), "malkrz xx $dst", []>;
+
+    let mayLoad = 1 in
+    def MALKRZxm : I<(outs), (ins mem:$dst), "malkrz xx $dst", []>;
+
+    def MALKRZxi : I<(outs), (ins i32imm:$dst), "malkrz xx $dst", []>;
+  }
+}
+
+let isBranch = 1, isTerminator = 1 in {
+  def FIrr_MALKRZx : PseudoI<(outs), (ins brtarget:$dst, Reg:$lhs, Reg:$rhs, cc:$cc),
+                             [(F2003fbrcc bb:$dst, Reg:$lhs, Reg:$rhs, timm:$cc)]>;
+  def FIrm_MALKRZx : PseudoI<(outs), (ins brtarget:$dst, Reg:$lhs, mem:$rhs, cc:$cc),
+                             [(F2003fbrcc bb:$dst, Reg:$lhs, (load addr:$rhs), timm:$cc)]>;
+  def FIri_MALKRZx : PseudoI<(outs), (ins brtarget:$dst, Reg:$lhs, i32imm:$rhs, cc:$cc),
+                             [(F2003fbrcc bb:$dst, Reg:$lhs, imm:$rhs, timm:$cc)]>;
+
+  def FImr_MALKRZx : PseudoI<(outs), (ins brtarget:$dst, mem:$lhs, Reg:$rhs, cc:$cc),
+                             [(F2003fbrcc bb:$dst, (load addr:$lhs), Reg:$rhs, timm:$cc)]>;
+  def FImm_MALKRZx : PseudoI<(outs), (ins brtarget:$dst, mem:$lhs, mem:$rhs, cc:$cc),
+                             [(F2003fbrcc bb:$dst, (load addr:$lhs), (i32 (load addr:$rhs)), timm:$cc)]>;
+  def FImi_MALKRZx : PseudoI<(outs), (ins brtarget:$dst, mem:$lhs, i32imm:$rhs, cc:$cc),
+                             [(F2003fbrcc bb:$dst, (load addr:$lhs), imm:$rhs, timm:$cc)]>;
+
+  def FIir_MALKRZx : PseudoI<(outs), (ins brtarget:$dst, i32imm:$lhs, Reg:$rhs, cc:$cc),
+                             [(F2003fbrcc bb:$dst, imm:$lhs, Reg:$rhs, timm:$cc)]>;
+  def FIim_MALKRZx : PseudoI<(outs), (ins brtarget:$dst, i32imm:$lhs, mem:$rhs, cc:$cc),
+                             [(F2003fbrcc bb:$dst, imm:$lhs, (load addr:$rhs), timm:$cc)]>;
+  def FIii_MALKRZx : PseudoI<(outs), (ins brtarget:$dst, i32imm:$lhs, i32imm:$rhs, cc:$cc),
+                             [(F2003fbrcc bb:$dst, imm:$lhs, imm:$rhs, timm:$cc)]>;
+}
+
 // F5 is marked as a use to prevent stack-pointer assignments that appear
 // immediately before calls from potentially appearing dead.
 let isCall = 1, Uses = [F5] in {

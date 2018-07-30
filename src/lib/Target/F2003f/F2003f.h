@@ -51,6 +51,10 @@ inline static const char *F2003fCCToString(F2003fCC::CondCode CC) {
   llvm_unreachable("Unknown condition code");
 }
 
+inline F2003fCC::CondCode OppositeF2003fCC(F2003fCC::CondCode CC) {
+  return static_cast<F2003fCC::CondCode>(CC ^ 1);
+}
+
 class F2003fTargetMachine;
 class FunctionPass;
 class formatted_raw_ostream;

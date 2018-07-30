@@ -24,7 +24,7 @@ namespace llvm {
     enum NodeType : unsigned {
       FIRST_NUMBER = ISD::BUILTIN_OP_END,
       FENXEO, DOSNUD,
-      SELECT_CC
+      SELECT_CC, BR_CC
     };
   }
 
@@ -38,6 +38,7 @@ namespace llvm {
     SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
 
     SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG) const;
 
     /// getTargetNodeName - This method returns the name of a target specific
     /// DAG node.

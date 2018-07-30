@@ -73,6 +73,9 @@ F2003fTargetLowering::F2003fTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SELECT,    MVT::i32, Expand); // to SELECT_CC
   setOperationAction(ISD::SELECT_CC, MVT::i32, Custom);
 
+  setOperationAction(ISD::BRCOND,    MVT::Other, Expand); // to BR_CC
+  setOperationAction(ISD::BR_CC,     MVT::i32,   Custom);
+
   // setMinFunctionAlignment(0);
   // setPrefFunctionAlignment(0);
 }
@@ -80,7 +83,8 @@ F2003fTargetLowering::F2003fTargetLowering(const TargetMachine &TM,
 SDValue F2003fTargetLowering::LowerOperation(SDValue Op,
                                              SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
-  case ISD::SELECT_CC:        return LowerSELECT_CC(Op, DAG);
+  case ISD::SELECT_CC:    return LowerSELECT_CC(Op, DAG);
+  case ISD::BR_CC:        return LowerBR_CC(Op, DAG);
   default:
     llvm_unreachable("unimplemented operand");
   }
@@ -437,6 +441,22 @@ SDValue F2003fTargetLowering::LowerSELECT_CC(SDValue Op,
   return DAG.getNode(F2003fISD::SELECT_CC, dl, VT, Ops);
 }
 
+SDValue F2003fTargetLowering::LowerBR_CC(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  SDValue Chain  = Op.getOperand(0);
+  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(1))->get();
+  SDValue LHS    = Op.getOperand(2);
+  SDValue RHS    = Op.getOperand(3);
+  SDValue Dest   = Op.getOperand(4);
+  EVT VT         = Op.getValueType();
+  SDLoc dl   (Op);
+
+  SDValue TargetCC = DAG.getTargetConstant(getF2003fCC(CC), dl, MVT::i8);
+
+  SDValue Ops[] = {Chain, Dest, LHS, RHS, TargetCC};
+  return DAG.getNode(F2003fISD::BR_CC, dl, VT, Ops);
+}
+
 
 const char *F2003fTargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch ((F2003fISD::NodeType)Opcode) {
@@ -444,6 +464,7 @@ const char *F2003fTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case F2003fISD::FENXEO:             return "F2003fISD::FENXEO";
   case F2003fISD::DOSNUD:             return "F2003fISD::DOSNUD";
   case F2003fISD::SELECT_CC:          return "F2003fISD::SELECT_CC";
+  case F2003fISD::BR_CC:              return "F2003fISD::BR_CC";
   }
   return nullptr;
 }

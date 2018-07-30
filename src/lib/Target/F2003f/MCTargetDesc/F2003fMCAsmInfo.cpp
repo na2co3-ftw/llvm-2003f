@@ -41,30 +41,31 @@ F2003fMCAsmInfo::F2003fMCAsmInfo(const Triple &TT) {
   // WeakDirective = "\t.weak\t";
 }
 
-static bool isAcceptableChar(char C) {
-  return (C >= 'a' && C <= 'z') || C == 'F' || C == 'R' || C == 'V' || C == 'X' ||
-         (C >= '0' && C <= '9') || C == '\'' || C == '_' || C == '-';
-}
+// static bool isAcceptableChar(char C) {
+//   return (C >= 'a' && C <= 'z') || C == 'F' || C == 'R' || C == 'V' || C == 'X' ||
+//          (C >= '0' && C <= '9') || C == '\'' || C == '_' || C == '-';
+// }
 
 bool F2003fMCAsmInfo::isValidUnquotedName(StringRef Name) const {
-  if (Name.empty())
-    return false;
-  if (Name.size() == 2) {
-    if (Name[0] == 'f' && Name[1] >= '0' && Name[1] <= '7')
-      return false;
-    if (Name.equals("xx"))
-      return false;
-  }
+  return true; // TODO
+  // if (Name.empty())
+  //   return false;
+  // if (Name.size() == 2) {
+  //   if (Name[0] == 'f' && Name[1] >= '0' && Name[1] <= '7')
+  //     return false;
+  //   if (Name.equals("xx"))
+  //     return false;
+  // }
 
-  bool hasNonNumericChar = false;
+  // bool hasNonNumericChar = false;
 
-  for (char C : Name) {
-    if (!hasNonNumericChar && (C <= '0' || C >= '9')) {
-      hasNonNumericChar = true;
-    }
-    if (!isAcceptableChar(C))
-      return false;
-  }
+  // for (char C : Name) {
+  //   if (!hasNonNumericChar && (C <= '0' || C >= '9')) {
+  //     hasNonNumericChar = true;
+  //   }
+  //   if (!isAcceptableChar(C))
+  //     return false;
+  // }
 
-  return hasNonNumericChar;
+  // return hasNonNumericChar;
 }
