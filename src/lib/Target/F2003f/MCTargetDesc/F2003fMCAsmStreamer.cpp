@@ -37,6 +37,14 @@ F2003fMCAsmStreamer::F2003fMCAsmStreamer(MCContext &Ctx, std::unique_ptr<formatt
   assert(InstPrinter);
 }
 
+void F2003fMCAsmStreamer::reset() {
+  LabelToEmit.clear();
+  ExplicitCommentToEmit.clear();
+  CommentToEmit.clear();
+  Symbols.clear();
+  MCStreamer::reset();
+}
+
 void F2003fMCAsmStreamer::EmitEOL() {
   // Dump Explicit Comments here.
   emitExplicitComments();
@@ -116,6 +124,7 @@ void F2003fMCAsmStreamer::ChangeSection(MCSection *Section, const MCExpr *) {}
 
 void F2003fMCAsmStreamer::EmitLabel(MCSymbol *Symbol, SMLoc Loc) {
   MCStreamer::EmitLabel(Symbol, Loc);
+  visitUsedSymbol(*Symbol);
 
   std::string Name;
   {
@@ -128,6 +137,8 @@ void F2003fMCAsmStreamer::EmitLabel(MCSymbol *Symbol, SMLoc Loc) {
 }
 
 void F2003fMCAsmStreamer::EmitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI, bool PrintSchedInfo) {
+  MCStreamer::EmitInstruction(Inst, STI);
+
   // Show the MCInst if enabled.
   if (ShowInst) {
     if (PrintSchedInfo)
@@ -169,12 +180,43 @@ void F2003fMCAsmStreamer::EmitRawTextImpl(StringRef String) {
   EmitEOL();
 }
 
+void F2003fMCAsmStreamer::visitUsedSymbol(const MCSymbol &Symbol) {
+  if (!Symbol.isRegistered()) {
+    Symbol.setIsRegistered(true);
+    Symbols.push_back(&Symbol);
+  }
+}
+
 void F2003fMCAsmStreamer::FinishImpl() {
   StringRef label = LabelToEmit;
   if (!label.empty()) {
     OS << "fen" << label;
     EmitEOL();
   }
+
+  for (auto *Symbol : Symbols) {
+    if (Symbol->isUndefined()) {
+      OS << "xok ";
+      Symbol->print(OS, MAI);
+      EmitEOL();
+    }
+  }
+}
+
+bool F2003fMCAsmStreamer::EmitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) {
+  visitUsedSymbol(*Symbol);
+
+  switch (Attribute) {
+  default: return false;
+  case MCSA_Global: // kue
+    OS << MAI->getGlobalDirective();
+    break;
+  }
+
+  Symbol->print(OS, MAI);
+  EmitEOL();
+
+  return true;
 }
 
 
@@ -188,22 +230,6 @@ void F2003fMCAsmStreamer::EmitAssignment(MCSymbol *Symbol, const MCExpr *Value) 
 
 void F2003fMCAsmStreamer::EmitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) { // .weakref
   llvm_unreachable("2003lk doesn't support this directive");
-}
-
-// .type .hidden .indirect_symbol .internal .lazy_reference .local .no_dead_strip .symbol_resolver
-// .alt_entry .private_extern .protected .reference .weak .weak_definition .weak_def_can_be_hidden
-bool F2003fMCAsmStreamer::EmitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) {
-  switch (Attribute) {
-  default: return false;
-  case MCSA_Global: // xok
-    OS << MAI->getGlobalDirective();
-    break;
-  }
-
-  Symbol->print(OS, MAI);
-  EmitEOL();
-
-  return true;
 }
 
 void F2003fMCAsmStreamer::EmitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) { // .desc

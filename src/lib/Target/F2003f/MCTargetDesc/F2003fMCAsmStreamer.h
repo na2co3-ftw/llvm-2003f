@@ -29,6 +29,7 @@ class F2003fMCAsmStreamer final : public MCStreamer {
   SmallString<128> ExplicitCommentToEmit;
   SmallString<128> CommentToEmit;
   raw_svector_ostream CommentStream;
+  std::vector<const MCSymbol *> Symbols;
 
   unsigned IsVerboseAsm : 1;
   unsigned ShowInst : 1;
@@ -39,6 +40,7 @@ public:
 
   bool isVerboseAsm() const override { return IsVerboseAsm; }
   bool hasRawTextSupport() const override { return true; }
+  void reset() override;
 
   void AddComment(const Twine &T, bool EOL = true) override;
   raw_ostream &GetCommentOS() override;
@@ -75,6 +77,7 @@ public:
 
   void EmitRawTextImpl(StringRef String) override;
 
+  void visitUsedSymbol(const MCSymbol &Symbol) override;
   void FinishImpl() override;
 
   inline void EmitEOL();
