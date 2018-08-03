@@ -39,6 +39,8 @@ namespace llvm {
 
     SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerExtendedLoad(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerTruncatingStore(SDValue Op, SelectionDAG &DAG) const;
 
     /// getTargetNodeName - This method returns the name of a target specific
     /// DAG node.
