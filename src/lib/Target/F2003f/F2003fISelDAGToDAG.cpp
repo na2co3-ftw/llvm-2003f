@@ -96,21 +96,19 @@ bool F2003fDAGToDAGISel::SelectAddr(SDValue N,
   EVT VT = N.getValueType();
 
   // reg+imm@
-  if (N.getOpcode() == ISD::ADD || N.getOpcode() == ISD::SUB) {
-    if (ConstantSDNode *RHS = dyn_cast<ConstantSDNode>(N.getOperand(1))) {
-      int RHSC = (int)RHS->getSExtValue();
-      if (N.getOpcode() == ISD::SUB)
-        RHSC = -RHSC;
+  if (CurDAG->isBaseWithConstantOffset(N)) {
+    int RHSC = (int)dyn_cast<ConstantSDNode>(N.getOperand(1))->getSExtValue();
+    if (N.getOpcode() == ISD::SUB)
+      RHSC = -RHSC;
 
-      Base = N.getOperand(0);
-      if (Base.getOpcode() == ISD::FrameIndex) {
-        int FI = cast<FrameIndexSDNode>(Base)->getIndex();
-        Base = CurDAG->getTargetFrameIndex(FI, TLI->getPointerTy(CurDAG->getDataLayout()));
-      }
-      DispReg = CurDAG->getRegister(0, VT);
-      DispImm = CurDAG->getTargetConstant(RHSC, SDLoc(N), MVT::i32);
-      return true;
+    Base = N.getOperand(0);
+    if (Base.getOpcode() == ISD::FrameIndex) {
+      int FI = cast<FrameIndexSDNode>(Base)->getIndex();
+      Base = CurDAG->getTargetFrameIndex(FI, TLI->getPointerTy(CurDAG->getDataLayout()));
     }
+    DispReg = CurDAG->getRegister(0, VT);
+    DispImm = CurDAG->getTargetConstant(RHSC, SDLoc(N), MVT::i32);
+    return true;
   }
 
   // reg+reg@
