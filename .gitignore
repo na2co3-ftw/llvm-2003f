@@ -1,3 +1,4 @@
 /build
-*.cmake
 *.pyc
+CPackConfig.cmake
+CPackSourceConfig.cmake
