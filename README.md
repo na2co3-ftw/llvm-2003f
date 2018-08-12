@@ -25,8 +25,8 @@ Install prerequisites:
 Build:
 1. create `build` Directory in the root of this repository
 1. open Command Prompt at `build`
-1. run `cmake -DLLVM_TARGETS_TO_BUILD="F2003f" ../src`
-    - or `cmake -DLLVM_TARGETS_TO_BUILD="F2003f" -Thost=x64 ../src` (in 64-bit environment)
+1. run `cmake -DLLVM_TARGETS_TO_BUILD="F2003f" -DLLVM_DEFAULT_TARGET_TRIPLE="2003f-unknown-unknown" ../src`
+    - or `cmake -DLLVM_TARGETS_TO_BUILD="F2003f" -DLLVM_DEFAULT_TARGET_TRIPLE="2003f-unknown-unknown" -Thost=x64 ../src` (in 64-bit environment)
 1. run `cmake --build . --target llc`
 
 generates ./build/Debug/bin/llc.exe
@@ -36,7 +36,7 @@ generates ./build/Debug/bin/llc.exe
 
 Example:
 ```
-./build/bin/llc sample/test1.ll -march=2003f
+./build/bin/llc sample/test1.ll
 ```
 
 ## Directory Structure
