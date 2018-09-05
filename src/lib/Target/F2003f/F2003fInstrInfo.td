@@ -49,6 +49,24 @@ def F2003fbrcc     : SDNode<"F2003fISD::BR_CC"     , SDT_F2003fBrCC, [SDNPHasCha
 
 def xnor  : PatFrag<(ops node:$a, node:$b), (not (xor node:$a, node:$b))>;
 
+def krz8i_node  : PatFrag<(ops node:$a), (sra node:$a, 24)>;
+def krz16i_node : PatFrag<(ops node:$a), (sra node:$a, 16)>;
+
+def krz8c_node  : PatFrag<(ops node:$a, node:$b), (or (and node:$a, 0x00ffffff), (shl node:$b, 24))>;
+def krz16c_node : PatFrag<(ops node:$a, node:$b), (or (and node:$a, 0x0000ffff), (shl node:$b, 16))>;
+
+def s_extload   : PatFrag<(ops node:$ptr), (unindexedload node:$ptr), [{
+  ISD::LoadExtType ET = cast<LoadSDNode>(N)->getExtensionType();
+  return ET == ISD::EXTLOAD || ET == ISD::SEXTLOAD;
+}]>;
+
+def s_extloadi8  : PatFrag<(ops node:$ptr), (s_extload node:$ptr), [{
+  return cast<LoadSDNode>(N)->getMemoryVT() == MVT::i8;
+}]>;
+def s_extloadi16 : PatFrag<(ops node:$ptr), (s_extload node:$ptr), [{
+  return cast<LoadSDNode>(N)->getMemoryVT() == MVT::i16;
+}]>;
+
 //===----------------------------------------------------------------------===//
 // Operand Definitions.
 //
@@ -151,6 +169,48 @@ let hasSideEffects = 0 in {
 
 let hasSideEffects = 0 in
 def FEN : I<(outs), (ins), "fen", []>;
+
+multiclass SextLoad<string mnemonic, SDPatternOperator loadNode, SDPatternOperator node> {
+    def rr : I<(outs Reg:$dst), (ins Reg:$src), !strconcat(mnemonic, " $dst $src"),
+               [(set Reg:$dst, (node Reg:$src))]>;
+
+    let isReMaterializable = 1 in
+    def rm : I<(outs Reg:$dst), (ins mem:$src), !strconcat(mnemonic, " $dst $src"),
+               [(set Reg:$dst, (loadNode addr:$src))]>;
+
+    let isReMaterializable = 1 in
+    def ri : I<(outs Reg:$dst), (ins i32imm:$src), !strconcat(mnemonic, " $dst $src"),
+               [(set Reg:$dst, (node imm:$src))]>;
+
+    def mr : I<(outs), (ins mem:$dst, Reg:$src), !strconcat(mnemonic, " $dst $src"),
+               [(store (node Reg:$src), addr:$dst)]>;
+    def mm : I<(outs), (ins mem:$dst, mem:$src), !strconcat(mnemonic, " $dst $src"),
+               [(store (i32 (loadNode addr:$src)), addr:$dst)]>;
+    def mi : I<(outs), (ins mem:$dst, i32imm:$src), !strconcat(mnemonic, " $dst $src"),
+               [(store (node (i32 imm:$src)), addr:$dst)]>;
+}
+
+defm KRZ8I  : SextLoad<"krz8i", s_extloadi8, krz8i_node>;
+defm KRZ16I : SextLoad<"krz16i", s_extloadi16, krz16i_node>;
+
+multiclass TruncStore<string mnemonic, SDPatternOperator storeNode, SDPatternOperator node> {
+    def rr : I<(outs Reg:$dst), (ins Reg:$src1, Reg:$src2), !strconcat(mnemonic, " $src1 $src2"),
+               [(set Reg:$dst, (node Reg:$src1, Reg:$src2))]>;
+    def rm : I<(outs Reg:$dst), (ins Reg:$src1, mem:$src2), !strconcat(mnemonic, " $src1 $src2"),
+               [(set Reg:$dst, (node Reg:$src1, (load addr:$src2)))]>;
+    def ri : I<(outs Reg:$dst), (ins Reg:$src1, i32imm:$src2), !strconcat(mnemonic, " $src1 $src2"),
+               [(set Reg:$dst, (node Reg:$src1, imm:$src2))]>;
+
+    def mr : I<(outs), (ins mem:$dst, Reg:$src), !strconcat(mnemonic, " $dst $src"),
+               [(storeNode Reg:$src, addr:$dst)]>;
+    def mm : I<(outs), (ins mem:$dst, mem:$src), !strconcat(mnemonic, " $dst $src"),
+               [(storeNode (i32 (load addr:$src)), addr:$dst)]>;
+    def mi : I<(outs), (ins mem:$dst, i32imm:$src), !strconcat(mnemonic, " $dst $src"),
+               [(storeNode (i32 imm:$src), addr:$dst)]>;
+}
+
+defm KRZ8C  : TruncStore<"krz8c", truncstorei8, krz8c_node>;
+defm KRZ16C : TruncStore<"krz16c", truncstorei16, krz16c_node>;
 
 // Unary Arithmetic Instructions.
 multiclass MonoOp<string mnemonic, SDPatternOperator opnode> {

@@ -35,7 +35,7 @@ static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
 
 static std::string computeDataLayout(const Triple &TT, StringRef CPU,
                                      const TargetOptions &Options) {
-  return "E-p:32:8:32-i32:8:32-n32";
+  return "E-p:32:32-i32:32-i16:16-i8:8-n32";
 }
 
 F2003fTargetMachine::F2003fTargetMachine(const Target &T, const Triple &TT,

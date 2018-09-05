@@ -55,10 +55,7 @@ F2003fTargetLowering::F2003fTargetLowering(const TargetMachine &TM,
   setBooleanVectorContents(ZeroOrOneBooleanContent);
 
   for (auto VT : { MVT::i8, MVT::i16 }) {
-    setLoadExtAction(ISD::EXTLOAD,  MVT::i32, VT,  Custom);
-    setLoadExtAction(ISD::SEXTLOAD, MVT::i32, VT,  Expand);
     setLoadExtAction(ISD::ZEXTLOAD, MVT::i32, VT,  Expand);
-    setTruncStoreAction(MVT::i32, VT, Custom);
   }
 
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1,  Expand);
@@ -89,8 +86,6 @@ SDValue F2003fTargetLowering::LowerOperation(SDValue Op,
   switch (Op.getOpcode()) {
   case ISD::SELECT_CC:    return LowerSELECT_CC(Op, DAG);
   case ISD::BR_CC:        return LowerBR_CC(Op, DAG);
-  case ISD::LOAD:         return LowerExtendedLoad(Op, DAG);
-  case ISD::STORE:        return LowerTruncatingStore(Op, DAG);
   default:
     llvm_unreachable("unimplemented operand");
   }
@@ -461,73 +456,6 @@ SDValue F2003fTargetLowering::LowerBR_CC(SDValue Op,
 
   SDValue Ops[] = {Chain, Dest, LHS, RHS, TargetCC};
   return DAG.getNode(F2003fISD::BR_CC, dl, VT, Ops);
-}
-
-SDValue F2003fTargetLowering::LowerExtendedLoad(SDValue Op, SelectionDAG &DAG) const {
-  LoadSDNode *Ld = cast<LoadSDNode>(Op.getNode());
-  EVT MemVT = Ld->getMemoryVT();
-  EVT VT = Op.getValueType();
-  SDValue BasePtr = Ld->getBasePtr();
-  SDLoc dl(Ld);
-
-  assert(Ld->getExtensionType() == ISD::EXTLOAD);
-
-  int Offset = (VT.getSizeInBits() / 8) - (MemVT.getSizeInBits() / 8);
-  unsigned Align = MinAlign(Ld->getAlignment(), Offset);
-
-  EVT PtrVT = getPointerTy(DAG.getDataLayout());
-  SDValue OffsetVal;
-  if (DAG.isBaseWithConstantOffset(BasePtr)) {
-    int OldOffset = (int)dyn_cast<ConstantSDNode>(BasePtr.getOperand(1))->getSExtValue();
-    OffsetVal = DAG.getNode(ISD::ADD, dl, PtrVT, BasePtr.getOperand(0),
-                            DAG.getConstant(OldOffset - Offset, dl, PtrVT));
-  } else {
-    OffsetVal = DAG.getNode(ISD::ADD, dl, PtrVT, BasePtr,
-                            DAG.getConstant(-Offset, dl, PtrVT));
-  }
-
-  return DAG.getLoad(VT, dl, Ld->getChain(), OffsetVal, Ld->getPointerInfo().getWithOffset(-Offset),
-                     Align, Ld->getMemOperand()->getFlags());
-}
-
-SDValue F2003fTargetLowering::LowerTruncatingStore(SDValue Op, SelectionDAG &DAG) const {
-  // example:
-  //     store16 %a, %ptr
-  // is converted to:
-  //     %loadVal = load32 %ptr-2
-  //     store32 (%a & 0xFFFF) | (%loadVal & 0xFFFF0000), %ptr-2
-  StoreSDNode *St = cast<StoreSDNode>(Op.getNode());
-  EVT MemVT = St->getMemoryVT();
-  EVT VT = St->getValue().getValueType();
-  SDValue BasePtr = St->getBasePtr();
-  SDLoc dl(St);
-
-  assert(St->isTruncatingStore());
-
-  int Offset = (VT.getSizeInBits() / 8) - (MemVT.getSizeInBits() / 8);
-  unsigned Align = MinAlign(St->getAlignment(), Offset);
-
-  unsigned ValSize = VT.getSizeInBits();
-  unsigned MemSize = MemVT.getSizeInBits();
-
-  EVT PtrVT = getPointerTy(DAG.getDataLayout());
-  SDValue OffsetVal;
-  if (DAG.isBaseWithConstantOffset(BasePtr)) {
-    int OldOffset = (int)dyn_cast<ConstantSDNode>(BasePtr.getOperand(1))->getSExtValue();
-    OffsetVal = DAG.getNode(ISD::ADD, dl, PtrVT, BasePtr.getOperand(0),
-                            DAG.getConstant(OldOffset - Offset, dl, PtrVT));
-  } else {
-    OffsetVal = DAG.getNode(ISD::ADD, dl, PtrVT, BasePtr,
-                            DAG.getConstant(-Offset, dl, PtrVT));
-  }
-  MachinePointerInfo MPI = St->getPointerInfo().getWithOffset(-Offset);
-
-  SDValue LoadVal = DAG.getLoad(VT, dl, St->getChain(), OffsetVal, MPI, Align);
-  SDValue MaskedLoadVal = DAG.getNode(ISD::AND, dl, VT, LoadVal,
-                                      DAG.getConstant(APInt::getHighBitsSet(ValSize, ValSize - MemSize),dl, VT));
-  SDValue StoreVal = DAG.getNode(ISD::OR, dl, VT, MaskedLoadVal,
-                                 DAG.getZeroExtendInReg(St->getValue(), dl, MemVT));
-  return DAG.getStore(LoadVal.getValue(1), dl, StoreVal, OffsetVal, MPI, Align, St->getMemOperand()->getFlags());
 }
 
 
