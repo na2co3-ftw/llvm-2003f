@@ -105,6 +105,19 @@ bool MCAsmInfo::isValidUnquotedName(StringRef Name) const {
   return true;
 }
 
+void MCAsmInfo::printQuotedName(raw_ostream &OS, StringRef Name) const {
+  OS << '"';
+  for (char C : Name) {
+    if (C == '\n')
+      OS << "\\n";
+    else if (C == '"')
+      OS << "\\\"";
+    else
+      OS << C;
+  }
+  OS << '"';
+}
+
 bool MCAsmInfo::shouldOmitSectionDirective(StringRef SectionName) const {
   // FIXME: Does .section .bss/.data/.text work everywhere??
   return SectionName == ".text" || SectionName == ".data" ||

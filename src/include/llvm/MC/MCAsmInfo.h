@@ -433,6 +433,8 @@ public:
   /// syntactically correct.
   virtual bool isValidUnquotedName(StringRef Name) const;
 
+  virtual void printQuotedName(raw_ostream &OS, StringRef Name) const;
+
   /// Return true if the .section directive should be omitted when
   /// emitting \p SectionName.  For example:
   ///

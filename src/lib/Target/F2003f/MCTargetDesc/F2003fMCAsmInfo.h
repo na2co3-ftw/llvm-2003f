@@ -26,6 +26,7 @@ public:
   explicit F2003fMCAsmInfo(const Triple &TT);
 
   bool isValidUnquotedName(StringRef Name) const override;
+  void printQuotedName(raw_ostream &OS, StringRef Name) const override;
 };
 
 } // namespace llvm
