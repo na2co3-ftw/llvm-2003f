@@ -23,6 +23,11 @@ namespace llvm {
   namespace F2003fISD {
     enum NodeType : unsigned {
       FIRST_NUMBER = ISD::BUILTIN_OP_END,
+
+      // A wrapper node for TargetConstantPool, TargetExternalSymbol,
+      // and TargetGlobalAddress.
+      Wrapper,
+
       FENXEO, DOSNUD,
       SELECT_CC, BR_CC
     };
@@ -39,6 +44,10 @@ namespace llvm {
 
     SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerExternalSymbol(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
 
     /// getTargetNodeName - This method returns the name of a target specific
     /// DAG node.

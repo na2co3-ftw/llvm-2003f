@@ -58,24 +58,30 @@ F2003fTargetLowering::F2003fTargetLowering(const TargetMachine &TM,
     setLoadExtAction(ISD::ZEXTLOAD, MVT::i32, VT,  Expand);
   }
 
-  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1,  Expand);
-  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i8,  Expand);
-  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i16, Expand);
+  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1,    Expand);
+  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i8,    Expand);
+  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i16,   Expand);
 
-  setOperationAction(ISD::MULHS, MVT::i32, Expand); // to SMUL_LOHI
-  setOperationAction(ISD::MULHU, MVT::i32, Expand); // to UMUL_LOHI
+  setOperationAction(ISD::MULHS,             MVT::i32,   Expand); // to SMUL_LOHI
+  setOperationAction(ISD::MULHU,             MVT::i32,   Expand); // to UMUL_LOHI
 
-  setOperationAction(ISD::ADDC, MVT::i32, Expand);
-  setOperationAction(ISD::SUBC, MVT::i32, Expand);
-  setOperationAction(ISD::ADDE, MVT::i32, Expand);
-  setOperationAction(ISD::SUBE, MVT::i32, Expand);
+  setOperationAction(ISD::ADDC,              MVT::i32,   Expand);
+  setOperationAction(ISD::SUBC,              MVT::i32,   Expand);
+  setOperationAction(ISD::ADDE,              MVT::i32,   Expand);
+  setOperationAction(ISD::SUBE,              MVT::i32,   Expand);
 
-  setOperationAction(ISD::SETCC,     MVT::i32, Expand); // to SELECT_CC
-  setOperationAction(ISD::SELECT,    MVT::i32, Expand); // to SELECT_CC
-  setOperationAction(ISD::SELECT_CC, MVT::i32, Custom);
+  setOperationAction(ISD::SETCC,             MVT::i32,   Expand); // to SELECT_CC
+  setOperationAction(ISD::SELECT,            MVT::i32,   Expand); // to SELECT_CC
+  setOperationAction(ISD::SELECT_CC,         MVT::i32,   Custom);
 
-  setOperationAction(ISD::BRCOND,    MVT::Other, Expand); // to BR_CC
-  setOperationAction(ISD::BR_CC,     MVT::i32,   Custom);
+  setOperationAction(ISD::BRCOND,            MVT::Other, Expand); // to BR_CC
+  setOperationAction(ISD::BR_CC,             MVT::i32,   Custom);
+  setOperationAction(ISD::BR_JT,             MVT::Other, Expand);
+
+  setOperationAction(ISD::GlobalAddress,     MVT::i32,   Custom);
+  setOperationAction(ISD::ExternalSymbol,    MVT::i32,   Custom);
+  setOperationAction(ISD::BlockAddress,      MVT::i32,   Custom);
+  setOperationAction(ISD::JumpTable,         MVT::i32,   Custom);
 
   // setMinFunctionAlignment(0);
   // setPrefFunctionAlignment(0);
@@ -84,8 +90,12 @@ F2003fTargetLowering::F2003fTargetLowering(const TargetMachine &TM,
 SDValue F2003fTargetLowering::LowerOperation(SDValue Op,
                                              SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
-  case ISD::SELECT_CC:    return LowerSELECT_CC(Op, DAG);
-  case ISD::BR_CC:        return LowerBR_CC(Op, DAG);
+  case ISD::SELECT_CC:      return LowerSELECT_CC(Op, DAG);
+  case ISD::BR_CC:          return LowerBR_CC(Op, DAG);
+  case ISD::GlobalAddress:  return LowerGlobalAddress(Op, DAG);
+  case ISD::BlockAddress:   return LowerBlockAddress(Op, DAG);
+  case ISD::ExternalSymbol: return LowerExternalSymbol(Op, DAG);
+  case ISD::JumpTable:      return LowerJumpTable(Op, DAG);
   default:
     llvm_unreachable("unimplemented operand");
   }
@@ -458,10 +468,58 @@ SDValue F2003fTargetLowering::LowerBR_CC(SDValue Op,
   return DAG.getNode(F2003fISD::BR_CC, dl, VT, Ops);
 }
 
+SDValue F2003fTargetLowering::LowerGlobalAddress(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  SDLoc dl(Op);
+  const GlobalValue *GV = cast<GlobalAddressSDNode>(Op)->getGlobal();
+  int64_t Offset = cast<GlobalAddressSDNode>(Op)->getOffset();
+  auto PtrVT = getPointerTy(DAG.getDataLayout());
+  SDValue Result = DAG.getTargetGlobalAddress(GV, dl, PtrVT);
+
+  Result = DAG.getNode(F2003fISD::Wrapper, SDLoc(Op), PtrVT, Result);
+
+  if (Offset) {
+    Result = DAG.getNode(ISD::ADD, dl, PtrVT, Result, DAG.getConstant(Offset, dl, PtrVT));
+  }
+
+  return Result;
+}
+
+SDValue F2003fTargetLowering::LowerExternalSymbol(SDValue Op,
+                                                  SelectionDAG &DAG) const {
+  SDLoc dl(Op);
+  const char *Sym = cast<ExternalSymbolSDNode>(Op)->getSymbol();
+  auto PtrVT = getPointerTy(DAG.getDataLayout());
+  SDValue Result = DAG.getTargetExternalSymbol(Sym, PtrVT);
+
+  return DAG.getNode(F2003fISD::Wrapper, dl, PtrVT, Result);
+}
+
+SDValue F2003fTargetLowering::LowerBlockAddress(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  SDLoc dl(Op);
+  auto PtrVT = getPointerTy(DAG.getDataLayout());
+  const BlockAddress *BA = cast<BlockAddressSDNode>(Op)->getBlockAddress();
+  SDValue Result = DAG.getTargetBlockAddress(BA, PtrVT);
+
+  return DAG.getNode(F2003fISD::Wrapper, dl, PtrVT, Result);
+}
+
+SDValue F2003fTargetLowering::LowerJumpTable(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  SDLoc dl(Op);
+  JumpTableSDNode *JT = cast<JumpTableSDNode>(Op);
+  auto PtrVT = getPointerTy(DAG.getDataLayout());
+  SDValue Result = DAG.getTargetJumpTable(JT->getIndex(), PtrVT);
+
+  return DAG.getNode(F2003fISD::Wrapper, dl, PtrVT, Result);
+}
+
 
 const char *F2003fTargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch ((F2003fISD::NodeType)Opcode) {
   case F2003fISD::FIRST_NUMBER:       break;
+  case F2003fISD::Wrapper:            return "F2003fISD::Wrapper";
   case F2003fISD::FENXEO:             return "F2003fISD::FENXEO";
   case F2003fISD::DOSNUD:             return "F2003fISD::DOSNUD";
   case F2003fISD::SELECT_CC:          return "F2003fISD::SELECT_CC";

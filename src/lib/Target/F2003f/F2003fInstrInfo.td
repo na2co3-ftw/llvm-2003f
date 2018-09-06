@@ -20,6 +20,9 @@ def SDT_F2003fCallSeqStart : SDCallSeqStart<[ SDTCisVT<0, i32>, SDTCisVT<1, i32>
 def SDT_F2003fCallSeqEnd : SDCallSeqEnd<[ SDTCisVT<0, i32>, SDTCisVT<1, i32> ]>;
 def SDT_F2003fCall : SDTypeProfile<0, 1, [SDTCisVT<0, iPTR>]>;
 
+def SDT_F2003fWrapper      : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
+                                                  SDTCisPtrTy<0>]>;
+
 def SDT_F2003fSelectCC : SDTypeProfile<1, 5, [
   SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>, SDTCisSameAs<3, 4>,
   SDTCisVT<5, i8>
@@ -39,6 +42,8 @@ def F2003fFenxeo : SDNode<"F2003fISD::FENXEO", SDT_F2003fCall,
                           [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue, SDNPVariadic]>;
 def F2003fDosnud : SDNode<"F2003fISD::DOSNUD", SDTNone,
                           [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+
+def F2003fWrapper : SDNode<"F2003fISD::Wrapper", SDT_F2003fWrapper>;
 
 def F2003fselectcc : SDNode<"F2003fISD::SELECT_CC" , SDT_F2003fSelectCC>;
 def F2003fbrcc     : SDNode<"F2003fISD::BR_CC"     , SDT_F2003fBrCC, [SDNPHasChain]>;
@@ -483,3 +488,17 @@ def ATAframe : PseudoI<(outs Reg:$dst), (ins i32imm:$base, i32imm:$offset), []>;
 def : Pat<(xor Reg:$src1, Reg:$src2), (NACr (DALrr Reg:$src1, Reg:$src2))>;
 def : Pat<(xor Reg:$src1, (load addr:$src2)), (NACr (DALrm Reg:$src1, addr:$src2))>;
 def : Pat<(xor Reg:$src1, imm:$src2), (NACr (DALri Reg:$src1, imm:$src2))>;
+
+def : Pat<(i32 (F2003fWrapper tglobaladdr:$dst)), (KRZri tglobaladdr:$dst)>;
+def : Pat<(i32 (F2003fWrapper texternalsym:$dst)), (KRZri texternalsym:$dst)>;
+def : Pat<(i32 (F2003fWrapper tblockaddress:$dst)), (KRZri tblockaddress:$dst)>;
+def : Pat<(i32 (F2003fWrapper tjumptable:$dst)), (KRZri tjumptable:$dst)>;
+
+def : Pat<(store (i32 (F2003fWrapper tglobaladdr:$src)), addr:$dst),
+          (KRZmi addr:$dst, tglobaladdr:$src)>;
+def : Pat<(store (i32 (F2003fWrapper texternalsym:$src)), addr:$dst),
+          (KRZmi addr:$dst, texternalsym:$src)>;
+def : Pat<(store (i32 (F2003fWrapper tblockaddress:$src)), addr:$dst),
+          (KRZmi addr:$dst, tblockaddress:$src)>;
+def : Pat<(store (i32 (F2003fWrapper tjumptable:$src)), addr:$dst),
+          (KRZmi addr:$dst, tjumptable:$src)>;
