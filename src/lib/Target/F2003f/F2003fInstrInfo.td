@@ -176,42 +176,44 @@ let hasSideEffects = 0 in
 def FEN : I<(outs), (ins), "fen", []>;
 
 multiclass SextLoad<string mnemonic, SDPatternOperator loadNode, SDPatternOperator node> {
-    def rr : I<(outs Reg:$dst), (ins Reg:$src), !strconcat(mnemonic, " $dst $src"),
-               [(set Reg:$dst, (node Reg:$src))]>;
+  def rr : I<(outs Reg:$dst), (ins Reg:$src), !strconcat(mnemonic, " $dst $src"),
+             [(set Reg:$dst, (node Reg:$src))]>;
 
-    let isReMaterializable = 1 in
-    def rm : I<(outs Reg:$dst), (ins mem:$src), !strconcat(mnemonic, " $dst $src"),
-               [(set Reg:$dst, (loadNode addr:$src))]>;
+  let isReMaterializable = 1 in
+  def rm : I<(outs Reg:$dst), (ins mem:$src), !strconcat(mnemonic, " $dst $src"),
+             [(set Reg:$dst, (loadNode addr:$src))]>;
 
-    let isReMaterializable = 1 in
-    def ri : I<(outs Reg:$dst), (ins i32imm:$src), !strconcat(mnemonic, " $dst $src"),
-               [(set Reg:$dst, (node imm:$src))]>;
+  let isReMaterializable = 1 in
+  def ri : I<(outs Reg:$dst), (ins i32imm:$src), !strconcat(mnemonic, " $dst $src"),
+             [(set Reg:$dst, (node imm:$src))]>;
 
-    def mr : I<(outs), (ins mem:$dst, Reg:$src), !strconcat(mnemonic, " $dst $src"),
-               [(store (node Reg:$src), addr:$dst)]>;
-    def mm : I<(outs), (ins mem:$dst, mem:$src), !strconcat(mnemonic, " $dst $src"),
-               [(store (i32 (loadNode addr:$src)), addr:$dst)]>;
-    def mi : I<(outs), (ins mem:$dst, i32imm:$src), !strconcat(mnemonic, " $dst $src"),
-               [(store (node (i32 imm:$src)), addr:$dst)]>;
+  def mr : I<(outs), (ins mem:$dst, Reg:$src), !strconcat(mnemonic, " $dst $src"),
+             [(store (node Reg:$src), addr:$dst)]>;
+  def mm : I<(outs), (ins mem:$dst, mem:$src), !strconcat(mnemonic, " $dst $src"),
+             [(store (i32 (loadNode addr:$src)), addr:$dst)]>;
+  def mi : I<(outs), (ins mem:$dst, i32imm:$src), !strconcat(mnemonic, " $dst $src"),
+             [(store (node (i32 imm:$src)), addr:$dst)]>;
 }
 
 defm KRZ8I  : SextLoad<"krz8i", s_extloadi8, krz8i_node>;
 defm KRZ16I : SextLoad<"krz16i", s_extloadi16, krz16i_node>;
 
 multiclass TruncStore<string mnemonic, SDPatternOperator storeNode, SDPatternOperator node> {
+  let Constraints = "$src1 = $dst" in {
     def rr : I<(outs Reg:$dst), (ins Reg:$src1, Reg:$src2), !strconcat(mnemonic, " $src1 $src2"),
                [(set Reg:$dst, (node Reg:$src1, Reg:$src2))]>;
     def rm : I<(outs Reg:$dst), (ins Reg:$src1, mem:$src2), !strconcat(mnemonic, " $src1 $src2"),
                [(set Reg:$dst, (node Reg:$src1, (load addr:$src2)))]>;
     def ri : I<(outs Reg:$dst), (ins Reg:$src1, i32imm:$src2), !strconcat(mnemonic, " $src1 $src2"),
                [(set Reg:$dst, (node Reg:$src1, imm:$src2))]>;
+  }
 
-    def mr : I<(outs), (ins mem:$dst, Reg:$src), !strconcat(mnemonic, " $dst $src"),
-               [(storeNode Reg:$src, addr:$dst)]>;
-    def mm : I<(outs), (ins mem:$dst, mem:$src), !strconcat(mnemonic, " $dst $src"),
-               [(storeNode (i32 (load addr:$src)), addr:$dst)]>;
-    def mi : I<(outs), (ins mem:$dst, i32imm:$src), !strconcat(mnemonic, " $dst $src"),
-               [(storeNode (i32 imm:$src), addr:$dst)]>;
+  def mr : I<(outs), (ins mem:$dst, Reg:$src), !strconcat(mnemonic, " $dst $src"),
+             [(storeNode Reg:$src, addr:$dst)]>;
+  def mm : I<(outs), (ins mem:$dst, mem:$src), !strconcat(mnemonic, " $dst $src"),
+             [(storeNode (i32 (load addr:$src)), addr:$dst)]>;
+  def mi : I<(outs), (ins mem:$dst, i32imm:$src), !strconcat(mnemonic, " $dst $src"),
+             [(storeNode (i32 imm:$src), addr:$dst)]>;
 }
 
 defm KRZ8C  : TruncStore<"krz8c", truncstorei8, krz8c_node>;
