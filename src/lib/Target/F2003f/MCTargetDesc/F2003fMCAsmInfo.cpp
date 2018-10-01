@@ -32,10 +32,10 @@ F2003fMCAsmInfo::F2003fMCAsmInfo(const Triple &TT) {
   // ZeroDirective = "\t.zero\t";
   // AsciiDirective = "\t.ascii\t";
   // AscizDirective = "\t.asciz\t";
-  // Data8bitsDirective = "\t.byte\t";
-  // Data16bitsDirective = "\t.short\t";
-  // Data32bitsDirective = "\t.long\t";
-  // Data64bitsDirective = "\t.quad\t";
+   Data8bitsDirective = "lifem8 ";
+   Data16bitsDirective = "lifem16 ";
+   Data32bitsDirective = "lifem ";
+   Data64bitsDirective = nullptr;
   GlobalDirective = "kue ";
   HasFunctionAlignment = false;
   HasDotTypeDotSizeDirective = false;

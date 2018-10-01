@@ -34,6 +34,9 @@ class F2003fMCAsmStreamer final : public MCStreamer {
   unsigned IsVerboseAsm : 1;
   unsigned ShowInst : 1;
 
+  unsigned CurrentAlignmentToValue;
+  SmallVector<unsigned char, 4> ValueBuffer;
+
 public:
   F2003fMCAsmStreamer(MCContext &Ctx, std::unique_ptr<formatted_raw_ostream> os,
                       bool isVerboseAsm, MCInstPrinter *printer, bool showInst);
@@ -51,6 +54,7 @@ public:
   void ChangeSection(MCSection *, const MCExpr *) override;
 
   void EmitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
+  void flushLabel(bool addFen);
   void EmitThumbFunc(MCSymbol *Func) override;
   void EmitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
   void EmitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) override;
@@ -61,8 +65,11 @@ public:
   void EmitZerofill(MCSection *Section, MCSymbol *Symbol = nullptr, uint64_t Size = 0, unsigned ByteAlignment = 0) override;
   void EmitTBSSSymbol(MCSection *Section, MCSymbol *Symbol, uint64_t Size, unsigned ByteAlignment = 0) override;
 
+  void flushValues();
   void EmitBytes(StringRef Data) override;
+  void EmitIntValue(uint64_t Value, unsigned Size) override;
   void EmitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc = SMLoc()) override;
+  void EmitValueWithAlignment(const MCExpr *Value, unsigned Size, SMLoc Loc = SMLoc());
   void emitFill(const MCExpr &NumBytes, uint64_t FillValue, SMLoc Loc = SMLoc()) override;
   void emitFill(const MCExpr &NumValues, int64_t Size, int64_t Expr, SMLoc Loc = SMLoc()) override;
   void EmitValueToAlignment(unsigned ByteAlignment, int64_t Value = 0,

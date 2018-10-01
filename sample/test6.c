@@ -1,11 +1,10 @@
 
-int a;
-int b = 10;
-const int c = 30;
-extern int d;
+int a = 10;
+const int b = 30;
+extern int c;
 
 int test1() {
-	return a + b + c + d;
+	return a + b + c;
 }
 
 int (*test2())() {

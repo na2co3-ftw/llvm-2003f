@@ -21,6 +21,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstPrinter.h"
+#include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormattedStream.h"
@@ -42,6 +43,8 @@ void F2003fMCAsmStreamer::reset() {
   ExplicitCommentToEmit.clear();
   CommentToEmit.clear();
   Symbols.clear();
+  CurrentAlignmentToValue = 1;
+  ValueBuffer.clear();
   MCStreamer::reset();
 }
 
@@ -120,9 +123,14 @@ void F2003fMCAsmStreamer::AddBlankLine() {
   EmitEOL();
 }
 
-void F2003fMCAsmStreamer::ChangeSection(MCSection *Section, const MCExpr *) {}
+void F2003fMCAsmStreamer::ChangeSection(MCSection *Section, const MCExpr *Subsection) {
+  flushValues();
+  // 2003lk does not support explicit section
+}
 
 void F2003fMCAsmStreamer::EmitLabel(MCSymbol *Symbol, SMLoc Loc) {
+  assert(ValueBuffer.empty() && "Label is not aligned!");
+
   MCStreamer::EmitLabel(Symbol, Loc);
   visitUsedSymbol(*Symbol);
 
@@ -134,6 +142,17 @@ void F2003fMCAsmStreamer::EmitLabel(MCSymbol *Symbol, SMLoc Loc) {
 
   LabelToEmit.append(" l' ");
   LabelToEmit.append(Name);
+}
+
+void F2003fMCAsmStreamer::flushLabel(bool addFen) {
+  StringRef label = LabelToEmit;
+  if (!label.empty()) {
+    if (addFen) {
+      OS << "fen";
+    }
+    OS << label;
+  }
+  LabelToEmit.clear();
 }
 
 void F2003fMCAsmStreamer::EmitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI, bool PrintSchedInfo) {
@@ -155,10 +174,7 @@ void F2003fMCAsmStreamer::EmitInstruction(const MCInst &Inst, const MCSubtargetI
   }
   OS << Buffer.substr(1);
 
-  StringRef label = LabelToEmit;
-  if (!label.empty())
-    OS << label;
-  LabelToEmit.clear();
+  flushLabel(false);
 
   if (PrintSchedInfo) {
     std::string SI = STI.getSchedInfoStr(Inst);
@@ -188,11 +204,8 @@ void F2003fMCAsmStreamer::visitUsedSymbol(const MCSymbol &Symbol) {
 }
 
 void F2003fMCAsmStreamer::FinishImpl() {
-  StringRef label = LabelToEmit;
-  if (!label.empty()) {
-    OS << "fen" << label;
-    EmitEOL();
-  }
+  flushValues();
+  flushLabel(true);
 
   for (auto *Symbol : Symbols) {
     if (Symbol->isUndefined()) {
@@ -217,6 +230,91 @@ bool F2003fMCAsmStreamer::EmitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Att
   EmitEOL();
 
   return true;
+}
+
+void F2003fMCAsmStreamer::EmitBytes(StringRef Data) {
+  for (unsigned i = 0, e = Data.size(); i != e; ++i) {
+    EmitValue(MCConstantExpr::create((unsigned char)Data[i], getContext()), 1);
+  }
+}
+
+void F2003fMCAsmStreamer::EmitIntValue(uint64_t Value, unsigned Size) {
+  EmitValue(MCConstantExpr::create(Value, getContext()), Size);
+}
+
+void F2003fMCAsmStreamer::EmitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) {
+  assert(Size <= 8 && "Invalid size");
+  assert(getCurrentSectionOnly() &&
+    "Cannot emit contents before setting section!");
+
+  if (CurrentAlignmentToValue == Size && ValueBuffer.empty()) {
+    EmitValueWithAlignment(Value, Size, Loc);
+    return;
+  }
+
+  int64_t IntValue;
+  if (!Value->evaluateAsAbsolute(IntValue))
+    report_fatal_error("Don't know how to emit this value.");
+
+  unsigned i = Size;
+  while (i != 0) {
+    i--;
+    ValueBuffer.push_back((unsigned char)(IntValue >> (i * 8)));
+
+    if (ValueBuffer.size() == CurrentAlignmentToValue) {
+      uint64_t ValueToEmit = 0;
+      for (unsigned j = 0; j < CurrentAlignmentToValue; ++j) {
+        ValueToEmit = (ValueToEmit << 8) | ValueBuffer[j];
+      }
+      EmitValueWithAlignment(MCConstantExpr::create(ValueToEmit, getContext()), CurrentAlignmentToValue, Loc);
+      ValueBuffer.clear();
+    }
+  }
+}
+
+void F2003fMCAsmStreamer::EmitValueWithAlignment(const MCExpr *Value, unsigned Size, SMLoc Loc) {
+  const char *Directive = nullptr;
+  switch (Size) {
+  default: break;
+  case 1: Directive = MAI->getData8bitsDirective();  break;
+  case 2: Directive = MAI->getData16bitsDirective(); break;
+  case 4: Directive = MAI->getData32bitsDirective(); break;
+  case 8: Directive = MAI->getData64bitsDirective(); break;
+  }
+
+  assert(Directive && "Invalid size for machine code value!");
+  OS << Directive;
+  Value->print(OS, MAI);
+  flushLabel(false);
+  EmitEOL();
+}
+
+void F2003fMCAsmStreamer::EmitValueToAlignment(unsigned ByteAlignment, int64_t Value,
+  unsigned ValueSize, unsigned MaxBytesToEmit) {
+  if (ByteAlignment == 1 || ByteAlignment == 2 || ByteAlignment == 4) {
+    CurrentAlignmentToValue = ByteAlignment;
+    return;
+  }
+  if (ByteAlignment % 4 == 0) {
+    CurrentAlignmentToValue = 4;
+    return;
+  }
+  CurrentAlignmentToValue = 1;
+}
+
+void F2003fMCAsmStreamer::flushValues() {
+  if (!ValueBuffer.empty()) {
+    uint64_t ValueToEmit = 0;
+    for (unsigned i = 0, e = ValueBuffer.size(); i != e; ++i) {
+      ValueToEmit = (ValueToEmit << 8) | ValueBuffer[i];
+    }
+    ValueToEmit <<= (CurrentAlignmentToValue - ValueBuffer.size()) * 8;
+
+    EmitValueWithAlignment(MCConstantExpr::create(ValueToEmit, getContext()), CurrentAlignmentToValue);
+    ValueBuffer.clear();
+  }
+
+  CurrentAlignmentToValue = 1;
 }
 
 
@@ -254,24 +352,11 @@ void F2003fMCAsmStreamer::EmitTBSSSymbol(MCSection *Section, MCSymbol *Symbol, u
   llvm_unreachable("2003lk doesn't support this directive");
 }
 
-void F2003fMCAsmStreamer::EmitBytes(StringRef Data) { // .byte
-  llvm_unreachable("2003lk doesn't support this directive");
-}
-
-void F2003fMCAsmStreamer::EmitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) { // .byte .short .long .quad
-  llvm_unreachable("2003lk doesn't support this directive");
-}
-
 void F2003fMCAsmStreamer::emitFill(const MCExpr &NumBytes, uint64_t FillValue, SMLoc Loc) { // .zero
   llvm_unreachable("2003lk doesn't support this directive");
 }
 
 void F2003fMCAsmStreamer::emitFill(const MCExpr &NumValues, int64_t Size, int64_t Expr, SMLoc Loc) { // .fill
-  llvm_unreachable("2003lk doesn't support this directive");
-}
-
-void F2003fMCAsmStreamer::EmitValueToAlignment(unsigned ByteAlignment, int64_t Value,
-                                               unsigned ValueSize, unsigned MaxBytesToEmit) { // .p2align .p2alignw .p2alignl
   llvm_unreachable("2003lk doesn't support this directive");
 }
 
