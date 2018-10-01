@@ -69,6 +69,13 @@ F2003fTargetLowering::F2003fTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SUBC,              MVT::i32,   Expand);
   setOperationAction(ISD::ADDE,              MVT::i32,   Expand);
   setOperationAction(ISD::SUBE,              MVT::i32,   Expand);
+  setOperationAction(ISD::ROTL,              MVT::i32,   Expand);
+  setOperationAction(ISD::ROTR,              MVT::i32,   Expand);
+  setOperationAction(ISD::BSWAP,             MVT::i32,   Expand);
+  setOperationAction(ISD::CTTZ,              MVT::i32,   Expand);
+  setOperationAction(ISD::CTLZ,              MVT::i32,   Expand);
+  setOperationAction(ISD::CTPOP,             MVT::i32,   Expand);
+  setOperationAction(ISD::BITREVERSE,        MVT::i32,   Expand);
 
   setOperationAction(ISD::SETCC,             MVT::i32,   Expand); // to SELECT_CC
   setOperationAction(ISD::SELECT,            MVT::i32,   Expand); // to SELECT_CC
