@@ -1,10 +1,10 @@
 
 int a = 10;
 const int b = 30;
-extern int c;
+extern int c[];
 
 int test1() {
-	return a + b + c;
+	return a + b + c[4];
 }
 
 int (*test2())() {

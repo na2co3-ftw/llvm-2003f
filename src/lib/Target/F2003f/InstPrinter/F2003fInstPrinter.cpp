@@ -54,7 +54,6 @@ void F2003fInstPrinter::printMem(const MCInst *MI, unsigned OpNo, raw_ostream &O
   const MCOperand &dispReg = MI->getOperand(OpNo+1);
   const MCOperand &dispImm = MI->getOperand(OpNo+2);
 
-  assert(base.getReg() && "Expected register");
   printOperand(MI, OpNo, O);
 
   if (dispReg.getReg()) {

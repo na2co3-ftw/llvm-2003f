@@ -24,8 +24,8 @@ namespace llvm {
     enum NodeType : unsigned {
       FIRST_NUMBER = ISD::BUILTIN_OP_END,
 
-      // A wrapper node for TargetConstantPool, TargetExternalSymbol,
-      // and TargetGlobalAddress.
+      // A wrapper node for TargetGlobalAddress, TargetExternalSymbol,
+      // TargetBlockAddress, and TargetJumpTable.
       Wrapper,
 
       FENXEO, DOSNUD,

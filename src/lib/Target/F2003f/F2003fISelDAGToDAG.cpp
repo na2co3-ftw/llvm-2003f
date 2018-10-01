@@ -95,7 +95,7 @@ bool F2003fDAGToDAGISel::SelectAddr(SDValue N,
                                     SDValue &Base, SDValue &DispReg, SDValue &DispImm) {
   EVT VT = N.getValueType();
 
-  // reg+imm@
+  // reg+imm@ or label+imm@
   if (CurDAG->isBaseWithConstantOffset(N)) {
     int RHSC = (int)dyn_cast<ConstantSDNode>(N.getOperand(1))->getSExtValue();
     if (N.getOpcode() == ISD::SUB)
@@ -105,25 +105,52 @@ bool F2003fDAGToDAGISel::SelectAddr(SDValue N,
     if (Base.getOpcode() == ISD::FrameIndex) {
       int FI = cast<FrameIndexSDNode>(Base)->getIndex();
       Base = CurDAG->getTargetFrameIndex(FI, TLI->getPointerTy(CurDAG->getDataLayout()));
+    } else if (Base.getOpcode() == F2003fISD::Wrapper) {
+      Base = Base.getOperand(0);
+    } else if (Base.getOpcode() == ISD::ADD) {
+      // label+reg+imm@
+      SDValue BaseAdd = Base;
+      if (BaseAdd.getOperand(0).getOpcode() == F2003fISD::Wrapper) {
+        Base = BaseAdd.getOperand(0).getOperand(0);
+        DispReg = BaseAdd.getOperand(1);
+        DispImm = CurDAG->getTargetConstant(RHSC, SDLoc(N), MVT::i32);
+        return true;
+      } else if (BaseAdd.getOperand(1).getOpcode() == F2003fISD::Wrapper) {
+        Base = BaseAdd.getOperand(1).getOperand(0);
+        DispReg = BaseAdd.getOperand(0);
+        DispImm = CurDAG->getTargetConstant(RHSC, SDLoc(N), MVT::i32);
+        return true;
+      }
     }
+
     DispReg = CurDAG->getRegister(0, VT);
     DispImm = CurDAG->getTargetConstant(RHSC, SDLoc(N), MVT::i32);
     return true;
   }
 
-  // reg+reg@
+  // reg+reg@ or label+reg@
   if (N.getOpcode() == ISD::ADD) {
-    Base = N.getOperand(0);
-    DispReg = N.getOperand(1);
+    if (N.getOperand(0).getOpcode() == F2003fISD::Wrapper) {
+      Base = N.getOperand(0).getOperand(0);
+      DispReg = N.getOperand(1);
+    } else if (N.getOperand(1).getOpcode() == F2003fISD::Wrapper) {
+      Base = N.getOperand(1).getOperand(0);
+      DispReg = N.getOperand(0);
+    } else {
+      Base = N.getOperand(0);
+      DispReg = N.getOperand(1);
+    }
     DispImm  = CurDAG->getTargetConstant(0, SDLoc(N), MVT::i32);
     return true;
   }
 
-  // reg@ (may become reg+imm@ when it is a frame index)
+  // reg@ or label@ (may become reg+imm@ when it is a frame index)
   if (N.getOpcode() == ISD::FrameIndex) {
     // Match frame index.
     int FI = cast<FrameIndexSDNode>(N)->getIndex();
     Base = CurDAG->getTargetFrameIndex(FI, TLI->getPointerTy(CurDAG->getDataLayout()));
+  } else if (N.getOpcode() == F2003fISD::Wrapper) {
+    Base = N.getOperand(0);
   } else {
     Base = N;
   }
